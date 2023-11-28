@@ -230,13 +230,11 @@ def load_gt_asia():
     # Create ground truth graph
     gt = nx.DiGraph()
     gt.add_edges_from([['S', 'L'],
-                    ['S', 'T'],
-                    ['A', 'T'],
-                    ['T', 'E'],
+                    ['S', 'B'],
+                    ['L', 'E'],
+                    ['B', 'D'],
                     ['E', 'X'],
                     ['E', 'D'],
-                    ['L', 'X'],
-                    ['L', 'D'],
-                    ['X', 'B'],
-                    ['B', 'D']])
+                    ['A', 'T'],
+                    ['T', 'E']])
     return gt
