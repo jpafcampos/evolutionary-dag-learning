@@ -46,4 +46,8 @@ secrets.json
 
 # Ignore pycache
 __pycache__/
+
+# Ignore notebooks
+.ipynb_checkpoints
+*.ipynb
 ```
