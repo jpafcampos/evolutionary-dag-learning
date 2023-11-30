@@ -185,7 +185,7 @@ def srt_network(G,rdados,auxn):
         string_bn+="]"
     return string_bn
 
-def hamming2(target,ind1,nodes):
+def learning_factors(target,ind1):
     TC=0
     TE=len(target.edges())
     IE=0
@@ -297,71 +297,6 @@ def search_dag(G,edge_a,edge_b):
     return G
 
 
-def F1score(target,ind1,nodes):
-    '''
-    Computes the F1 score between a target and a candidate graph
-    Parameters:
-    -----------
-    target : networkx.DiGraph
-        Target graph.
-    ind1 : networkx.DiGraph
-        Candidate graph.
-    nodes : list
-        List of nodes in the graph.
-    Returns:
-    --------
-    float
-        F1 score between the target and the candidate graph.
-
-    '''
-    
-    TP=0 # True positive
-    FN=0 # False negative
-    FP=0 # False positive
-    TN=0 # True negative
-    for i in nodes:
-        for j in nodes:           
-            if i!=j:
-                if target.has_edge(i,j):
-                    if ind1.has_edge(i,j):
-                        TP+=1
-                    else:
-                        FN+=1
-                else:
-                    if ind1.has_edge(i,j):
-                        FP+=1
-                    else:
-                        TN+=1
-
-    precision=TP/(TP+FP)
-    recall=TP/(TP+FN)
-    accuracy=(TP+TN)/(TP+TN+FN+FP)
-    f1score=2*(recall*precision)/(recall+precision)
-    return f1score, accuracy, precision, recall
-
-def num_of_correct_edges(target,ind1):
-    '''
-    Computes the number of correct edges between a target and a candidate graph
-    Parameters:
-    -----------
-    target : networkx.DiGraph
-        Target graph.
-    ind1 : networkx.DiGraph
-        Candidate graph.
-    Returns:
-    --------
-    int
-        Number of correct edges between the target and the candidate graph.
-
-    '''
-    TC=0
-    TE=len(target.edges())
-
-    for i in target.edges():
-        if ind1.has_edge(i[0],i[1]) or ind1.has_edge(i[1],i[0]):
-            TC+=1
-
-    return TC / TE
 
 def hamming_distance_digraph(G1, G2):
     # Ensure both graphs are directed
@@ -482,37 +417,73 @@ def save_feasible_only_plots(PATH, bic_hist, ls_hist):
     # Save plots
     plt.figure()
     plt.plot(best_score_hist)
+    plt.xlabel('Iteration')
+    plt.ylabel('Best Score')
+    plt.title('Best Score History (BIC)')
     plt.savefig(PATH + 'best_score_history.png')
     plt.figure()
     plt.plot(mean_score_hist)
+    plt.xlabel('Iteration')
+    plt.ylabel('Mean Score')
+    plt.title('Mean Score History (BIC)')
     plt.savefig(PATH + 'mean_score_history.png')
     plt.figure()
     plt.plot(std_score_hist)
+    plt.xlabel('Iteration')
+    plt.ylabel('Standard Deviation Score')
+    plt.title('Standard Deviation Score History (BIC)')
     plt.savefig(PATH + 'std_score_history.png')
     plt.figure()
     plt.plot(best_score_hist_ls)
+    plt.xlabel('Iteration')
+    plt.ylabel('Best Score')
+    plt.title('Best Score History (LS)')
     plt.savefig(PATH + 'best_score_history_ls.png')
     plt.figure()
     plt.plot(mean_score_hist_ls)
+    plt.xlabel('Iteration')
+    plt.ylabel('Mean Score')
+    plt.title('Mean Score History (LS)')
     plt.savefig(PATH + 'mean_score_history_ls.png')
     plt.figure()
     plt.plot(std_score_hist_ls)
+    plt.xlabel('Iteration')
+    plt.ylabel('Standard Deviation Score')
+    plt.title('Standard Deviation Score History (LS)')
     plt.savefig(PATH + 'std_score_history_ls.png')
 
-def save_infeasible_plots(PATH, ls_hist, dagness_hist):
+def save_infeasible_plots(PATH, ls_hist, dagness_hist, bic_hist):
     best_score_hist =  compute_min_score(ls_hist)
     mean_score_hist = compute_mean_score(ls_hist)
     std_score_hist = compute_std_score(ls_hist)
     # Save plots
     plt.figure()
     plt.plot(best_score_hist)
+    plt.xlabel('Iteration')
+    plt.ylabel('Best Score')
+    plt.title('Best Score History')
     plt.savefig(PATH + 'best_score_history.png')
     plt.figure()
     plt.plot(mean_score_hist)
+    plt.xlabel('Iteration')
+    plt.ylabel('Mean Score')
+    plt.title('Mean Score History')
     plt.savefig(PATH + 'mean_score_history.png')
     plt.figure()
     plt.plot(std_score_hist)
+    plt.xlabel('Iteration')
+    plt.ylabel('Standard Deviation Score')
+    plt.title('Standard Deviation Score History')
     plt.savefig(PATH + 'std_score_history.png')
     plt.figure()
     plt.plot(dagness_hist)
+    plt.xlabel('Iteration')
+    plt.ylabel('Dagness')
+    plt.title('Dagness History')
     plt.savefig(PATH + 'dagness_history.png')
+    plt.figure()
+    plt.plot(bic_hist)
+    plt.xlabel('Iteration')
+    plt.ylabel('BIC Score')
+    plt.title('BIC Score History')
+    plt.savefig(PATH + 'bic_history.png')

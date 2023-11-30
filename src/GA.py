@@ -164,6 +164,7 @@ def evolve_infeasible(population, max_iter, mutation_rate, crossover_rate, nodes
     best_graph = None
     least_squares_history = []
     dagness_history = []
+    bic_history = []
     # Iterate
     for i in range(max_iter):
         # Select parents
@@ -212,12 +213,15 @@ def evolve_infeasible(population, max_iter, mutation_rate, crossover_rate, nodes
         if count_patience >= patience:
             break
         
-        # Update BIC history
+        # Update history
         least_squares_history.append(score_vector)
         dagness_history.append(dagness_of_best)
+        if dagness_of_best == 0:
+            bic_history.append([BIC(best_graph, data)])
+
         print('Iteration', i, 'score', best_score)
 
-    return best_graph, least_squares_history, dagness_history, population
+    return best_graph, least_squares_history, dagness_history, bic_history, population
 
 
 
@@ -266,66 +270,68 @@ if __name__ == '__main__':
     feasible_only = args.feasible_only
     mu = args.mu
 
-    # Create initial population
-    nodes = data.columns
-    nodes = list(nodes)
-    population = createPopulation(pop_size, nodes, density_factor, args.feasible_only_init_pop)
 
-    # Evolve population
-    if feasible_only:
-        print('Feasible only')
-        best_graph, bic_hist, ls_hist, evolved_pop = evolve_DAGs(population, max_iter, mutation_rate, crossover_rate, nodes, patience, feasible_only)
-        # Save plots
-        save_feasible_only_plots(PATH, bic_hist, ls_hist)
+    n_runs = 1
+    time_vector = []
+    for i in range(n_runs):
+        # measure time
+        start = time.time()
+        # Create initial population
+        nodes = data.columns
+        nodes = list(nodes)
+        population = createPopulation(pop_size, nodes, density_factor, args.feasible_only_init_pop)
 
-    else:
-        print('Infeasible allowed')
-        best_graph, ls_hist, dagness_hist, evolved_pop = evolve_infeasible(population, max_iter, mutation_rate, crossover_rate, nodes, patience, mu, feasible_only)
-        # Save plots
-        save_infeasible_plots(PATH, ls_hist, dagness_hist)
+        # Evolve population
+        if feasible_only:
+            print('Feasible only')
+            best_graph, bic_hist, ls_hist, evolved_pop = evolve_DAGs(population, max_iter, mutation_rate, crossover_rate, nodes, patience, feasible_only)
+            # Save plots
+            save_feasible_only_plots(PATH, bic_hist, ls_hist)
 
-
-    print("Algorithm ended. Computing Results")
-
-    # Compute metrics
-
-    best_score_bic = BIC(best_graph, data)
-    best_score_ls = lagrangian(best_graph, data)
-
-    # Hamming distance
-    directed_hamming_dist = hamming_distance_digraph(ground_truth, best_graph)
-    undirected_hamming_dist = hamming_distance_undirected(ground_truth, best_graph)
-    # F1 score
-    f1, _, _, _ = F1Score(ground_truth, best_graph, nodes)
-    # Number of correct edges found
-    correct_edges = num_of_correct_edges(ground_truth, best_graph)
-
-    # Save results
-    print('Saving results')
-    
-    filename = PATH +f'results_{args.data}_{"feasible" if args.feasible_only else "infeasible"}.csv'
-    with open(filename, 'a', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow([args.data, args.sample_size, args.max_iter, args.mutation_rate, 
-                         args.crossover_rate, args.popSize, args.patience, args.density_factor, args.feasible_only, 
-                         args.feasible_only_init_pop, best_score_bic, best_score_ls, directed_hamming_dist, undirected_hamming_dist, f1, correct_edges])
+        else:
+            print('Infeasible allowed')
+            best_graph, ls_hist, dagness_hist, bic_hist, evolved_pop = evolve_infeasible(population, max_iter, mutation_rate, crossover_rate, nodes, patience, mu, feasible_only)
+            # Save plots
+            save_infeasible_plots(PATH, ls_hist, dagness_hist, bic_hist)
 
 
-    # Save best graph
-    #nx.write_graphml(best_graph, 'best_graph.graphml')
+        print("Algorithm ended. Computing Results")
+        end = time.time()
+        time_vector.append(end-start)
 
-    # Print Results
-    print('Best graph:', best_graph.edges())
-    print('Best score BIC:', best_score_bic)
-    print('Best score LS:', best_score_ls)
-    print('Hamming distance:', directed_hamming_dist)
-    print('Hamming distance undirected:', undirected_hamming_dist)
-    print('F1 score:', f1)
-    print('Correct edges:', correct_edges)
+        # Compute metrics
 
-    # Draw best graph
-    plt.figure()
-    nx.draw(best_graph, with_labels=True)
-    plt.savefig(PATH + 'best_graph.png')
+        best_score_bic = BIC(best_graph, data)
+        best_score_ls = lagrangian(best_graph, data)
 
-    
+        # Hamming distance
+        SLF, TLF = learning_factors(ground_truth, best_graph)
+
+        # Save results
+        print('Saving results')
+        
+        filename = PATH +f'results_{args.data}_{"feasible" if args.feasible_only else "infeasible"}.csv'
+        with open(filename, 'a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow([args.data, args.sample_size, args.max_iter, args.mutation_rate, 
+                            args.crossover_rate, args.popSize, args.patience, args.density_factor, args.feasible_only, 
+                            args.feasible_only_init_pop, best_score_bic, best_score_ls, SLF, TLF])
+
+
+        # Save best graph
+        #nx.write_graphml(best_graph, 'best_graph.graphml')
+
+        # Print Results
+        print('Best graph:', best_graph.edges())
+        print('Best score BIC:', best_score_bic)
+        print('Best score LS:', best_score_ls)
+        print('Structure Learning Factor:', SLF)
+        print('Topology Learning Factor:', TLF)
+
+        # Draw best graph
+        plt.figure()
+        nx.draw(best_graph, with_labels=True)
+        plt.savefig(PATH + 'best_graph.png')
+
+
+    print("Mean time:", statistics.mean(time_vector))
