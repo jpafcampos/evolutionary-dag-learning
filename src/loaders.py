@@ -217,7 +217,7 @@ def load_gt_adult():
     return gt
 
 
-def load_gt_asia():
+def load_gt_network_asia():
     '''
     Loads the ground truth graph for the Asia dataset.
     
@@ -238,3 +238,16 @@ def load_gt_asia():
                     ['A', 'T'],
                     ['T', 'E']])
     return gt
+
+def load_gt_adj_asia():
+    data = load_asia_data(sample_size=1000)
+    d = data.shape[1]
+    nodes = data.columns
+    node2idx = {node: idx for idx, node in enumerate(nodes)}
+    idx2node = {idx: node for idx, node in enumerate(nodes)}
+    gt_edges = [('A', 'T'), ('T', 'E'), ('E', 'X'), ('S', 'L'), ('L', 'E'), ('E', 'X'), ('S', 'B'), ('B', 'D')]
+    gt_adj = np.zeros((d, d))
+    for edge in gt_edges:
+        gt_adj[node2idx[edge[0]], node2idx[edge[1]]] = 1
+
+    return gt_adj, node2idx, idx2node

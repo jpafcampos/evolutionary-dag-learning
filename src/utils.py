@@ -245,7 +245,76 @@ def F1Score(target,ind1,nodes):
     return f1score, accuracy,precision,recall
 
 
+def break_cycles(G):
+    '''
+    Function that repairs the cyclic graph G to a DAG.
+    This function selects a random edge from the cycle and removes it.
+    '''
+    if nx.is_directed_acyclic_graph(G):
+        return G
+    
+    while not nx.is_directed_acyclic_graph(G):
+        cycles = list(nx.simple_cycles(G))
+        
+        if not cycles:
+            break
+        
+        # Select a random cycle
+        cycle = random.choice(cycles)
+        
+        random_node = random.choice(cycle)
+        child_node = cycle[(cycle.index(random_node) + 1) % len(cycle)]
+
+        G.remove_edge(random_node, child_node)
+    
+    return G
+
+
+def fix_disconnected_graph(G):
+    '''
+    Fixes the graph so that it becomes connected and avoiding cycles.
+
+    Parameters:
+    G (nx.DiGraph): The graph to be fixed.
+
+    Returns:
+    nx.DiGraph: The fixed graph.
+    '''
+    if nx.is_weakly_connected(G):
+        return G
+
+    # Find connected components
+    components = list(nx.weakly_connected_components(G))
+
+    # Add edges to connect components
+    for i in range(len(components)-1):
+        nodes1 = list(components[i])
+        nodes2 = list(components[i+1])
+        node1 = random.choice(nodes1)
+        node2 = random.choice(nodes2)
+        G.add_edge(node1, node2)
+
+    return G
+
+def make_dag_mfas(G):
+    '''
+    Function that solves the Minimum Feedback Arc Set problem to transform G into a DAG.
+    '''
+    # Find the minimum feedback arc set
+    
+    mfas = nx.minimum_feedback_arc_set(G)  #infelizmente não existe
+
+    # Remove the edges in the minimum feedback arc set
+    G.remove_edges_from(mfas)
+
+    return G
+
+
+# ALTERNATIVE: USE NETWORKX FUNCTION "FIND CYCLE" TO FIND CYCLES IN THE GRAPH AND BREAK THEM
+
+
 def search_dag(G,edge_a,edge_b):
+   
     '''
     Function to make sure that the resulting graph is a DAG.
     '''
@@ -408,82 +477,87 @@ def define_path_to_save(data, feasible_only):
     return path
 
 def save_feasible_only_plots(PATH, bic_hist, ls_hist):
-    best_score_hist =  compute_min_score(bic_hist)
-    mean_score_hist = compute_mean_score(bic_hist)
-    std_score_hist = compute_std_score(bic_hist)
-    best_score_hist_ls =  compute_min_score(ls_hist)
+    best_score_hist_bic = compute_min_score(bic_hist)
+    mean_score_hist_bic = compute_mean_score(bic_hist)
+    #std_score_hist_bic = compute_std_score(bic_hist)
+    best_score_hist_ls = compute_min_score(ls_hist)
     mean_score_hist_ls = compute_mean_score(ls_hist)
-    std_score_hist_ls = compute_std_score(ls_hist)
+    #std_score_hist_ls = compute_std_score(ls_hist)
     # Save plots
-    plt.figure()
-    plt.plot(best_score_hist)
-    plt.xlabel('Iteration')
-    plt.ylabel('Best Score')
-    plt.title('Best Score History (BIC)')
+    fig, ax1 = plt.subplots()
+
+    # Plotting BIC scores on the first y-axis
+    bic_line, = ax1.plot(best_score_hist_bic, color='blue', label='BIC')
+    ax1.set_ylabel('BIC', color='blue')
+
+    # Creating a secondary y-axis for Least Squares scores
+    ax2 = ax1.twinx()
+    ls_line, = ax2.plot(best_score_hist_ls, color='red', linestyle = '--', label='Least Squares')
+    ax2.set_ylabel('Least Squares', color='red')
+
+    # Displaying legends for both plots
+    lines = [bic_line, ls_line]
+    labels = [line.get_label() for line in lines]
+    ax1.legend(lines, labels, loc='upper right')
     plt.savefig(PATH + 'best_score_history.png')
+    
     plt.figure()
-    plt.plot(mean_score_hist)
-    plt.xlabel('Iteration')
-    plt.ylabel('Mean Score')
-    plt.title('Mean Score History (BIC)')
+    fig2, ax1 = plt.subplots()
+
+    # Plotting BIC scores on the first y-axis
+    bic_line, = ax1.plot(mean_score_hist_bic, color='blue', label='BIC (mean)')
+    ax1.set_ylabel('BIC', color='blue')
+
+    # Creating a secondary y-axis for Least Squares scores
+    ax2 = ax1.twinx()
+    ls_line, = ax2.plot(mean_score_hist_ls, color='red', linestyle = '--', label='Least Squares (mean)')
+    ax2.set_ylabel('Least Squares', color='red')
+
+    # Displaying legends for both plots
+    lines = [bic_line, ls_line]
+    labels = [line.get_label() for line in lines]
+    ax1.legend(lines, labels, loc='upper right')
     plt.savefig(PATH + 'mean_score_history.png')
-    plt.figure()
-    plt.plot(std_score_hist)
-    plt.xlabel('Iteration')
-    plt.ylabel('Standard Deviation Score')
-    plt.title('Standard Deviation Score History (BIC)')
-    plt.savefig(PATH + 'std_score_history.png')
-    plt.figure()
-    plt.plot(best_score_hist_ls)
-    plt.xlabel('Iteration')
-    plt.ylabel('Best Score')
-    plt.title('Best Score History (LS)')
-    plt.savefig(PATH + 'best_score_history_ls.png')
-    plt.figure()
-    plt.plot(mean_score_hist_ls)
-    plt.xlabel('Iteration')
-    plt.ylabel('Mean Score')
-    plt.title('Mean Score History (LS)')
-    plt.savefig(PATH + 'mean_score_history_ls.png')
-    plt.figure()
-    plt.plot(std_score_hist_ls)
-    plt.xlabel('Iteration')
-    plt.ylabel('Standard Deviation Score')
-    plt.title('Standard Deviation Score History (LS)')
-    plt.savefig(PATH + 'std_score_history_ls.png')
+
+
+
+
 
 def save_infeasible_plots(PATH, ls_hist, dagness_hist, bic_hist):
-    best_score_hist =  compute_min_score(ls_hist)
+    best_score_hist = compute_min_score(ls_hist)
     mean_score_hist = compute_mean_score(ls_hist)
-    std_score_hist = compute_std_score(ls_hist)
+    #std_score_hist = compute_std_score(ls_hist)
     # Save plots
-    plt.figure()
-    plt.plot(best_score_hist)
-    plt.xlabel('Iteration')
-    plt.ylabel('Best Score')
-    plt.title('Best Score History')
-    plt.savefig(PATH + 'best_score_history.png')
-    plt.figure()
-    plt.plot(mean_score_hist)
-    plt.xlabel('Iteration')
-    plt.ylabel('Mean Score')
-    plt.title('Mean Score History')
-    plt.savefig(PATH + 'mean_score_history.png')
-    plt.figure()
-    plt.plot(std_score_hist)
-    plt.xlabel('Iteration')
-    plt.ylabel('Standard Deviation Score')
-    plt.title('Standard Deviation Score History')
-    plt.savefig(PATH + 'std_score_history.png')
+    fig, ax1 = plt.subplots()
+
+    # Creating a secondary y-axis for BIC scores
+    ax2 = ax1.twinx()
+
+    # Plotting Least Squares scores on the left y-axis
+    ls_line, = ax1.plot(best_score_hist, color='blue', label='Least Squares')
+    ax1.set_ylabel('Least Squares', color='blue')
+
+    # Plotting BIC scores on the right y-axis
+    bic_line, = ax2.plot(bic_hist, color='red', linestyle='--', label='BIC')
+    ax2.set_ylabel('BIC', color='red')
+
+    # Displaying legends for both plots
+    lines = [ls_line, bic_line]
+    labels = [line.get_label() for line in lines]
+    ax1.legend(lines, labels, loc='upper right')
+    plt.savefig(PATH + 'ls_bic_history.png')
+
     plt.figure()
     plt.plot(dagness_hist)
     plt.xlabel('Iteration')
     plt.ylabel('Dagness')
     plt.title('Dagness History')
     plt.savefig(PATH + 'dagness_history.png')
+
+    # plot the mean LS score history
     plt.figure()
-    plt.plot(bic_hist)
+    plt.plot(mean_score_hist)
     plt.xlabel('Iteration')
-    plt.ylabel('BIC Score')
-    plt.title('BIC Score History')
-    plt.savefig(PATH + 'bic_history.png')
+    plt.ylabel('Mean LS score')
+    plt.title('Mean LS score History')
+    plt.savefig(PATH + 'mean_ls_history.png')

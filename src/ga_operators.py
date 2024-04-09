@@ -19,244 +19,239 @@ from utils import *
 from loaders import *
 import matplotlib.pyplot as plt
 
-def fix_graph(G):
-    '''
-    Fixes the graph so that it becomes connected and avoiding cycles.
+class Individual():
+    def __init__(self, genes, nodes):
+        self.genes = genes
+        self.nodes = nodes
+        self.bic = 0
 
-    Parameters:
-    G (nx.DiGraph): The graph to be fixed.
+    def init_random(self, sparsity):
+        n = len(self.nodes)
+        num_ones = int(sparsity * n * n)
+        self.genes = [0] * n * n
+        self.genes[:num_ones] = [1] * num_ones
+        np.random.shuffle(self.genes)
 
-    Returns:
-    nx.DiGraph: The fixed graph.
-    '''
-    if nx.is_weakly_connected(G):
+    def init_from_genes(self, genes):
+        self.genes = genes
+
+    def bit_flip_mutation(self, feasible_only=False):
+        #select random bit
+        bit = random.randint(0, len(self.genes)-1)
+        #flip bit
+        self.genes[bit] = 1 - self.genes[bit]
+
+        if feasible_only:
+            if not self.is_dag():
+                self.repair_dag()
+            if not self.is_connected():
+                self.repair_connectivity()
+    
+    def uniform_mutation(self, prob, feasible_only=False):
+        for i in range(len(self.genes)):
+            if random.random() < prob:
+                self.genes[i] = 1 - self.genes[i]
+        
+        if feasible_only:
+            if not self.is_dag():
+                self.repair_dag()
+            if not self.is_connected():
+                self.repair_connectivity()
+
+    def reverse_edge_mutation(self, feasible_only=False):
+        adj_matrix = self.compute_adjacency_matrix()
+        adj_matrix = reverse_random_edge(adj_matrix)
+        self.genes = adj_matrix.flatten().tolist()
+
+        if feasible_only:
+            if not self.is_dag():
+                self.repair_dag()
+            if not self.is_connected():
+                self.repair_connectivity()
+
+    def compute_adjacency_matrix(self):
+        n = len(self.nodes)
+        return np.array(self.genes).reshape(n, n)
+    
+    def individual_to_digraph(self):
+        n = len(self.nodes)
+        G = nx.DiGraph()
+        G.add_nodes_from(self.nodes)
+        adj = self.compute_adjacency_matrix()
+        for i in range(n):
+            for j in range(n):
+                if adj[i, j] == 1:
+                    G.add_edge(self.nodes[i], self.nodes[j])
         return G
 
-    # Find connected components
-    components = list(nx.weakly_connected_components(G))
+    def is_dag(self):
+        G = self.individual_to_digraph()
+        return nx.is_directed_acyclic_graph(G)
+    
+    def is_connected(self):
+        G = self.individual_to_digraph()
+        return nx.is_weakly_connected(G)
+    
+    def repair_connectivity(self):
+        G = self.individual_to_digraph()
+        if not self.is_connected():
+            G = fix_disconnected_graph(G)
+            adj = nx.to_numpy_array(G)
+            self.genes = adj.flatten().tolist()
+    
+    def compute_bic(self, data):
+        G = self.individual_to_digraph()
+        score = BIC(G, data)
+        self.bic = score
+        return score
+    
+    def repair_dag(self):
+        G = self.individual_to_digraph()
+        G = break_cycles(G)
+        adj = nx.to_numpy_array(G)
+        self.genes = adj.flatten().tolist()
+    
+    def __str__(self):
+        return str(self.genes) + ' - '
+    
 
-    # Add edges to connect components
-    for i in range(len(components)-1):
-        nodes1 = list(components[i])
-        nodes2 = list(components[i+1])
-        node1 = random.choice(nodes1)
-        node2 = random.choice(nodes2)
-        G.add_edge(node1, node2)
-
-    return G
-
-def crossover(ind1, ind2, nodes, feasible_only = False):
-    '''
-    Perform crossover between two individuals (graphs) by combining their edges.
+def reverse_random_edge(adj_matrix):
+    """
+    Reverse the direction of a randomly selected existing edge in the adjacency matrix.
     
     Parameters:
+        adj_matrix (numpy.ndarray): Adjacency matrix representing the directed graph.
+    
+    Returns:
+        numpy.ndarray: Updated adjacency matrix with a randomly selected edge reversed.
+    """
+    # Find indices of existing edges
+    edges = np.argwhere(adj_matrix == 1)
+    
+    if len(edges) == 0:
+        print("No edges to reverse.")
+        return adj_matrix
+    
+    # Randomly select an edge
+    edge_idx = random.choice(range(len(edges)))
+    u, v = edges[edge_idx]
+    
+    # Copy the adjacency matrix to avoid modifying the original
+    reversed_matrix = np.copy(adj_matrix)
+    
+    # Reverse the direction of the selected edge
+    reversed_matrix[u][v] = 0
+    reversed_matrix[v][u] = 1
+    
+    return reversed_matrix
+
+
+def adjacency_matrix_to_individual(adjacency_matrix, nodes):
+    return Individual(adjacency_matrix.flatten().tolist(), nodes)
+
+def single_point_crossover(parent1, parent2, feasible_only=False):
+    '''
+    Single point cross over.
+
+    Parameters:
     -----------
-    ind1 : networkx.DiGraph
-        First individual (graph) to be crossed over.
-    ind2 : networkx.DiGraph
-        Second individual (graph) to be crossed over.
-    nodes : list
-        List of nodes that should be present in the resulting graphs.
-    feasible_only : bool, optional
-        If True, only feasible graphs (DAGs) will be returned. Default is False.
+    parent1 : Individual
+        The first parent.
+    parent2 : Individual
+        The second parent.
 
     Returns:
     --------
-    networkx.DiGraph
-        Resulting graph after crossover.
-    float
-        BIC score of the resulting graph.
-    dict
-        Updated dictionary containing auxiliary information for the BIC scoring function.
+    Individual
+        The child.
     '''
-    a = ind1.copy()
-    a.update(ind2.copy())
-    f1 = nx.DiGraph()
-    f2 = nx.DiGraph()
-    for i in nodes:
-        if i not in f1.nodes():
-            f1.add_node(i)
-        if i not in f2.nodes():
-            f2.add_node(i)
-    for i in ind1.edges():
-        if i in ind2.edges():
-            f1.add_edge(i[0], i[1])
-            f2.add_edge(i[0], i[1])
-    for i in a.edges():
-        if not f1.has_edge(i[0], i[1]):
-            if f1.has_edge(i[1], i[0]):
-                r = random.random()
-                if r <= 0.5:
-                    f1.remove_edge(i[1], i[0])
-                    f1.add_edge(i[0], i[1])
-                    if feasible_only:
-                        search_dag(f1, i[0], i[1])
-                else:
-                    if f2.has_edge(i[1], i[0]):
-                        f2.remove_edge(i[1], i[0])
-                        f2.add_edge(i[0], i[1])
-                    if feasible_only:
-                        search_dag(f2, i[0], i[1])
-            else:
-                r = random.random()
-                if r <= 0.5:
-                    f1.add_edge(i[0], i[1])
-                    if feasible_only:
-                        search_dag(f1, i[0], i[1])
-                else:
-                    f2.add_edge(i[0], i[1])
-                    if feasible_only:
-                        search_dag(f2, i[0], i[1])
+    point = random.randint(0, len(parent1.genes))
+    child1 = Individual(parent1.genes[:point] + parent2.genes[point:], parent1.nodes)
+    child2 = Individual(parent2.genes[:point] + parent1.genes[point:], parent1.nodes)
 
-    # Check if new individuals are connected, and fix them if they are not
-    if not nx.is_weakly_connected(f1):
-        f1 = fix_graph(f1)
-    if not nx.is_weakly_connected(f2):
-        f2 = fix_graph(f2)
+    if feasible_only:
+        if not child1.is_dag():
+            child1.repair_dag()
+        if not child2.is_dag():
+            child2.repair_dag()
 
-    return f1, f2
+    return child1, child2
 
+def bnc_pso_crossover(parent1, parent2, feasible_only=False):
+    child1 = Individual([], parent1.nodes)
+    for i in range(len(parent1.genes)):
+        if parent1.genes[i] == parent2.genes[i]:
+            child1.genes.append(parent1.genes[i])
+        else:
+            child1.genes.append(random.choice([parent1.genes[i], parent2.genes[i]]))
+    if feasible_only:
+        if not child1.is_dag():
+            child1.repair_dag()
+        if not child1.is_connected():
+            child1.repair_connectivity()
 
-def mutation(ind1, nodes, feasible_only=False):
+    return child1
+
+def uniform_crossover(parent1, parent2, feasible_only=False):
     '''
-    Applies a mutation operator to the given individual by randomly adding, removing, or reversing an edge between two nodes in the graph.
+    Uniform cross over.
 
-    Parameters:
-    ind1 (nx.DiGraph): The individual to be mutated.
-    nodes (list): A list of nodes in the graph.
-    feasible_only (bool): If True, the mutation operator will only produce feasible individuals (i.e. DAGs).
-
-    Returns:
-    tuple: A tuple containing the mutated individual and a list of the nodes and action taken during the mutation.
-    '''
-    R = nx.DiGraph()
-    R = ind1.copy()
-    action="NNN"
-    for a in nodes:
-        if a not in R.nodes():
-            R.add_node(a)
-
-    node1= random.randint(0,len(nodes)-1)
-    node2= node1
-    while(node1 == node2):
-        node2= random.randint(0,len(nodes)-1)
-    rand = random.random()
-    if ind1.has_edge(nodes[node1],nodes[node2]):
-        if rand <=0.5:
-            R.remove_edge(nodes[node1],nodes[node2])
-            R.add_edge(nodes[node2],nodes[node1])
-            if feasible_only:
-                search_dag(R,node1,node2)
-            action="right"
-        else:
-            R.remove_edge(nodes[node1],nodes[node2])
-            action="remove"
-    elif ind1.has_edge(nodes[node2],nodes[node1]):
-        if rand <=0.5:
-            R.remove_edge(nodes[node2],nodes[node1])
-            R.add_edge(nodes[node1],nodes[node2])
-            if feasible_only:
-                search_dag(R,node1,node2)
-            action="left"
-        else:
-            R.remove_edge(nodes[node2],nodes[node1])
-            action="remove"
-    else:
-        if rand <=0.5:
-            R.add_edge(nodes[node1],nodes[node2])
-            if feasible_only:
-                search_dag(R,node1,node2)
-            action="right"
-        else:
-            R.add_edge(nodes[node2],nodes[node1])
-            if feasible_only:
-                search_dag(R,node1,node2)
-            action="left"
-    ns = [nodes[node2],nodes[node1],action]
-
-    # Check if new individual is connected, and fix it if it is not
-    if not nx.is_weakly_connected(R):
-        R = fix_graph(R)
-    
-    return R #, ns
-
-
-def tournament(Agents, popSize):
-    k=0.75
-    individuo1=round((popSize-1) * random.random())
-    individuo2=round((popSize-1) * random.random())
-    r = random.random()
-    if r<=k:
-        if Agents[individuo1].score<=Agents[individuo2].score:
-            return individuo1
-        else:
-            return individuo2
-    else:
-        if Agents[individuo1].score>=Agents[individuo2].score:
-            return individuo1
-        else:
-            return individuo2
-
-
-def elitism(all_agents,popSize):
-    prox_ind=[]
-    fit=[]
-    melhorfit=all_agents[0].score
-    melhorind=all_agents[0].variable
-    for j in range(len(all_agents)):
-        fit.append(all_agents[j].score)
-        if all_agents[j].score<melhorfit:
-            melhorfit=all_agents[j].score
-            melhorind=all_agents[j].variable
-            
-    indice=[i[0] for i in sorted(enumerate(fit), key=lambda x:x[1])] # sort
-    i=0
-    while len(prox_ind)<popSize:
-        prox_ind.append(all_agents[indice[i]])
-        i=i+1
-    return prox_ind,melhorfit,melhorind
-
-
-def createPopulation(popSize, nodes, density_factor = 0.3, feasible_only = False):
-    '''
-    Creates the initial population of individuals (graphs).
-    
     Parameters:
     -----------
-    popSize : int
+    parent1 : Individual
+        The first parent.
+    parent2 : Individual
+        The second parent.
+
+    Returns:
+    --------
+    Individual
+        The child.
+    '''
+    child = Individual([], parent1.nodes)
+    for i in range(len(parent1.genes)):
+        child.genes.append(random.choice([parent1.genes[i], parent2.genes[i]]))
+    if feasible_only:
+        if not child.is_dag():
+            child.repair_dag()
+    return child
+
+def create_population(pop_size, nodes, data, feasible_only=False):
+    '''
+    Creates a population of individuals.
+
+    Parameters:
+    -----------
+    pop_size : int
         The size of the population.
     nodes : list
-        A list of nodes in the graph.
-    
+        The list of nodes.
+    feasible_only : bool
+        Whether to create only feasible individuals.
+
     Returns:
     --------
     list
-        A list of individuals (graphs).
+        The population.
     '''
-    population = []
-    for i in range(popSize):
-        ind = nx.DiGraph()
-        for j in nodes:
-            ind.add_node(j)
-        for j in nodes:
-            for k in nodes:
-                if j != k:
-                    r = random.random()
-                    if r <= density_factor:
-                        if random.random() <= 0.5:
-                            ind.add_edge(j, k)
-                        if feasible_only:
-                            search_dag(ind, j, k)
-        if not nx.is_weakly_connected(ind):
-            ind = fix_graph(ind)
-        # Save an image of the created graph on a different figure
-        #plt.figure()
-        #nx.draw(ind, with_labels=True)
-        #plt.savefig('graph' + str(i) + '.png')
- 
-        population.append(ind)
+    pop = []
+    for _ in range(pop_size):
+        individual = Individual([], nodes)
+        sparsity = random.uniform(0.1, 0.7)
+        individual.init_random(sparsity=sparsity)
+        if feasible_only:
+            if not individual.is_dag():
+                individual.repair_dag()
+            if not individual.is_connected():
+                individual.repair_connectivity()
+        individual.compute_bic(data)
+        pop.append(individual)
+    return pop
 
-    return population
+    
+    
+
+
 
 
 # Main
@@ -270,4 +265,4 @@ if __name__ == "__main__":
     av_max = 100
     
     data = load_asia_data(sample_size=1000)
-    pop = createPopulation(pop_size, data.columns, data, feasible_only=False)
+    pop = create_population(pop_size, data.columns, data, feasible_only=False)
