@@ -23,14 +23,12 @@ class Individual():
     def __init__(self, genes, nodes):
         self.genes = genes
         self.nodes = nodes
-        self.bic = 0
+        self.bic = None
 
-    def init_random(self, sparsity):
-        n = len(self.nodes)
-        num_ones = int(sparsity * n * n)
-        self.genes = [0] * n * n
-        self.genes[:num_ones] = [1] * num_ones
-        np.random.shuffle(self.genes)
+    def init_random(self, num_nodes, sparsity=0.5):
+        G = nx.gnp_random_graph(num_nodes, sparsity, directed=True)
+        genes = nx.adjacency_matrix(G).todense().flatten().tolist()
+        self.genes = genes
 
     def init_from_genes(self, genes):
         self.genes = genes
@@ -115,6 +113,78 @@ class Individual():
         return str(self.genes) + ' - '
     
 
+def mutation(individual, feasible_only=True):
+    '''
+    Mutates an individual in the digraph representation, by randomly adding, removing or reversing an edge.
+
+    Parameters:
+    -----------
+    individual : Individual
+        The individual to be mutated.
+    feasible_only : bool
+        Whether to create only feasible individuals.
+
+    Returns:
+    --------
+    Individual
+        The mutated individual.
+    '''
+    nodes = individual.nodes
+    digraph = individual.individual_to_digraph()
+
+    # Randomly select two nodes
+    node1 = random.choice(nodes)
+    node2 = node1
+    while node2 == node1:
+        node2 = random.choice(nodes)
+    
+    rand = random.random()
+    if digraph.has_edge(node1, node2):
+        if rand < 0.5:
+            # Reverse an existing edge
+            digraph.remove_edge(node1, node2)
+            digraph.add_edge(node2, node1)
+            if feasible_only:
+                digraph = break_cycles(digraph)
+                #digraph = search_dag(digraph, node1, node2)
+
+        else:
+            # Remove an existing edge
+            digraph.remove_edge(node1, node2)
+    elif digraph.has_edge(node2, node1):
+        if rand < 0.5:
+            # Reverse an existing edge
+            digraph.remove_edge(node2, node1)
+            digraph.add_edge(node1, node2)
+            if feasible_only:
+                digraph = break_cycles(digraph)
+                #digraph = search_dag(digraph, node1, node2)
+        else:
+            # Remove an existing edge
+            digraph.remove_edge(node2, node1)
+    else:
+        if rand < 0.5:
+            # Add a new edge
+            digraph.add_edge(node1, node2)
+            if feasible_only:
+                digraph = break_cycles(digraph)
+                #digraph = search_dag(digraph, node1, node2)
+        else:
+            # Add a new edge
+            digraph.add_edge(node2, node1)
+            if feasible_only:
+                digraph = break_cycles(digraph)
+                #digraph = search_dag(digraph, node1, node2)
+
+    if not nx.is_weakly_connected(digraph):
+        digraph = fix_disconnected_graph(digraph)
+    
+    # Update individual genes
+    individual.genes = nx.adjacency_matrix(digraph).todense().flatten().tolist()
+
+
+    return individual
+
 def reverse_random_edge(adj_matrix):
     """
     Reverse the direction of a randomly selected existing edge in the adjacency matrix.
@@ -172,25 +242,40 @@ def single_point_crossover(parent1, parent2, feasible_only=False):
     if feasible_only:
         if not child1.is_dag():
             child1.repair_dag()
+        if not child1.is_connected():
+            child1.repair_connectivity()
         if not child2.is_dag():
             child2.repair_dag()
+        if not child2.is_connected():
+            child2.repair_connectivity()
 
-    return child1, child2
+    #return best child
+    if child1.bic < child2.bic:
+        return child1
+    else:
+        return child2
 
 def bnc_pso_crossover(parent1, parent2, feasible_only=False):
     child1 = Individual([], parent1.nodes)
+    child2 = Individual([], parent1.nodes)
     for i in range(len(parent1.genes)):
         if parent1.genes[i] == parent2.genes[i]:
             child1.genes.append(parent1.genes[i])
+            child2.genes.append(parent1.genes[i])
         else:
             child1.genes.append(random.choice([parent1.genes[i], parent2.genes[i]]))
+            child2.genes.append(random.choice([parent1.genes[i], parent2.genes[i]]))
     if feasible_only:
         if not child1.is_dag():
             child1.repair_dag()
         if not child1.is_connected():
             child1.repair_connectivity()
+        if not child2.is_dag():
+            child2.repair_dag()
+        if not child2.is_connected():
+            child2.repair_connectivity()
 
-    return child1
+    return child1, child2
 
 def uniform_crossover(parent1, parent2, feasible_only=False):
     '''
@@ -208,15 +293,24 @@ def uniform_crossover(parent1, parent2, feasible_only=False):
     Individual
         The child.
     '''
-    child = Individual([], parent1.nodes)
+    child1 = Individual([], parent1.nodes)
+    child2 = Individual([], parent1.nodes)
     for i in range(len(parent1.genes)):
-        child.genes.append(random.choice([parent1.genes[i], parent2.genes[i]]))
+        child1.genes.append(random.choice([parent1.genes[i], parent2.genes[i]]))
+        child2.genes.append(random.choice([parent1.genes[i], parent2.genes[i]]))
     if feasible_only:
-        if not child.is_dag():
-            child.repair_dag()
-    return child
+        if not child1.is_dag():
+            child1.repair_dag()
+        if not child1.is_connected():
+            child1.repair_connectivity()
+        if not child2.is_dag():
+            child2.repair_dag()
+        if not child2.is_connected():
+            child2.repair_connectivity()
+            
+    return child1, child2
 
-def create_population(pop_size, nodes, data, feasible_only=False):
+def create_population(pop_size, nodes, data, feasible_only=True):
     '''
     Creates a population of individuals.
 
@@ -237,13 +331,19 @@ def create_population(pop_size, nodes, data, feasible_only=False):
     pop = []
     for _ in range(pop_size):
         individual = Individual([], nodes)
-        sparsity = random.uniform(0.1, 0.7)
-        individual.init_random(sparsity=sparsity)
+        sparsity = 0.1
+        #print("initializing individual randomly")
+        individual.init_random(num_nodes = len(nodes), sparsity=sparsity)
+        #print("individual created, fixing connectivity and cycles")
         if feasible_only:
+            #print("FEASIBLE ONLY, LETS CHECK")
             if not individual.is_dag():
+                #print("repairing cycles")
                 individual.repair_dag()
             if not individual.is_connected():
+                #print("repairing connectivity")
                 individual.repair_connectivity()
+        #print("individual fixed, computing BIC")
         individual.compute_bic(data)
         pop.append(individual)
     return pop

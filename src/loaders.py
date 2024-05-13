@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import networkx as nx
+import bnlearn as bn
 
 def load_asia_data(path = '../data/asia10K.csv', sample_size = None):
     '''
@@ -30,8 +31,8 @@ def load_asia_data(path = '../data/asia10K.csv', sample_size = None):
     }, inplace=True)
 
     if sample_size is not None:
-        data = data.head(sample_size)
-        #data = data.sample(sample_size)
+        #data = data.head(sample_size)
+        data = data.sample(sample_size)
 
     return data
 
@@ -251,3 +252,34 @@ def load_gt_adj_asia():
         gt_adj[node2idx[edge[0]], node2idx[edge[1]]] = 1
 
     return gt_adj, node2idx, idx2node
+
+
+def load_child_data(path='../data/child.csv', sample_size=None):
+    '''
+    Loads and processes the child data.
+    
+    Parameters:
+    -----------
+    path : str, optional
+        Path to the child data file.
+
+    Returns:
+    --------
+    pandas.DataFrame
+        The processed dataset.
+    '''
+    # Load the data
+    data = pd.read_csv(path)
+    if sample_size is not None:
+        data = data.sample(sample_size)
+
+    return data
+
+def load_gt_network_child(path='../data/child.gml'):
+    G = nx.read_gml(path)
+    return G
+
+
+if __name__ == '__main__':
+    G = load_gt_network_child()
+    print(G.edges)

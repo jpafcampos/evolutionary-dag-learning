@@ -77,7 +77,7 @@ def least_squares(G, data):
     
     '''
     # W is the adjacency matrix of G
-    W = nx.to_numpy_matrix(G, nodelist=data.columns)
+    W = nx.adjacency_matrix(G).todense()
     W = np.array(W)
     X = data.values
     # least squares score
@@ -245,6 +245,23 @@ def F1Score(target,ind1,nodes):
     return f1score, accuracy,precision,recall
 
 
+def break_cyclessss(G):
+    '''
+    Function that repairs the cyclic graph G to a DAG.
+    This function selects a random edge from the cycle and removes it.
+    '''
+    if nx.is_directed_acyclic_graph(G):
+        return G
+    
+    while not nx.is_directed_acyclic_graph(G):
+        cycle = nx.find_cycle(G)
+        edge = random.choice(cycle)
+        G.remove_edge(edge[0], edge[1])
+        #if random.random() <= 0.5:
+        #    G.add_edge(edge[1], edge[0])
+    
+    return G
+
 def break_cycles(G):
     '''
     Function that repairs the cyclic graph G to a DAG.
@@ -260,15 +277,16 @@ def break_cycles(G):
             break
         
         # Select a random cycle
+        #print("selecting a random cycle")
         cycle = random.choice(cycles)
         
+        #print("removing edge from cycle")
         random_node = random.choice(cycle)
         child_node = cycle[(cycle.index(random_node) + 1) % len(cycle)]
 
         G.remove_edge(random_node, child_node)
     
     return G
-
 
 def fix_disconnected_graph(G):
     '''
@@ -472,6 +490,10 @@ def define_path_to_save(data, feasible_only):
         path = '../results/asia_freestyle/'
     elif not feasible_only and data == 'adult':
         path = '../results/adult_freestyle/'
+    elif data == 'child' and feasible_only:
+        path = '../results/child_dag/'
+    elif data == 'child' and not feasible_only:
+        path = '../results/child_freestyle/'
     else:
         path = '../results/'
     return path

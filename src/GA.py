@@ -10,7 +10,6 @@ import random
 import networkx as nx
 import pandas as pd
 import csv
-from pgmpy.readwrite import BIFReader
 import time
 import statistics
 import bnlearn as bn
@@ -22,6 +21,7 @@ from ga_operators import *
 from loaders import *
 import matplotlib.pyplot as plt
 import argparse
+import copy
 
 
 def select_best(population, n, data):
@@ -45,12 +45,12 @@ def select_best(population, n, data):
         List containing the selected individuals.
     '''
     # Select best individuals
-    scores = [i.compute_bic(data) for i in population]
+    scores = [i.compute_bic(data) if i.bic == None else i.bic for i in population]
     rank = np.argsort(scores)
     best_n = rank[:n]
     return list(population[i] for i in best_n)
 
-def select_parents_by_rank(population, num_parents, data):
+def select_parents_by_rank(population, num_parents, selection_pressure, data):
     '''
     Select parents from a population using rank-based selection.
 
@@ -71,8 +71,10 @@ def select_parents_by_rank(population, num_parents, data):
     # Rank population
     population = select_best(population, len(population), data)
     # Compute rank probabilities
-    rank_probs = [1/(i+1) for i in range(len(population))]
-    rank_probs = [p/sum(rank_probs) for p in rank_probs]
+    s = selection_pressure # Selection pressure between 1 and 2 as described in Eiben and Smith (2003)
+    mu = len(population)
+    rank_probs = [(2-s)/mu + 2*(i)*(s-1)/(mu*(mu-1)) for i in range(1, mu+1)]
+    rank_probs = rank_probs[::-1]
     # Select parents
     parents = random.choices(population, weights=rank_probs, k=num_parents)
     return parents
@@ -100,13 +102,13 @@ def select_parents_by_tournament(population, num_parents, data):
         # Select random individuals
         tournament = random.sample(population, 2)
         # Select best individual
-        best = select_best(tournament, 1, BIC, data)[0]
+        best = select_best(tournament, 1, data)[0]
         parents.append(best)
     return parents
 
 
 
-def evolve_DAGs (population, max_iter, mutation_rate, crossover_rate, patience, feasible_only=True, verbose=False):
+def evolve_DAGs (population, max_iter, mutation_rate, crossover_rate, patience, selection_pressure, goal_bic, crossover_function = 'bnc_pso', feasible_only=True, verbose=False):
     '''
     Evolve a population of DAGs using a genetic algorithm.
     
@@ -138,40 +140,64 @@ def evolve_DAGs (population, max_iter, mutation_rate, crossover_rate, patience, 
     bic_history = []
     count_patience = 0
     pop_size = len(population)
+
+    crossover_operator = bnc_pso_crossover if crossover_function == 'bnc_pso' else uniform_crossover
+
     # Iterate
     for i in range(max_iter):
         # Select parents
         if verbose:
             print('Iteration:', i)
-        parents = select_parents_by_rank(population, len(population)//2, data)
+        parents = select_parents_by_rank(population, len(population), selection_pressure, data)
         # Crossover
         if verbose:
             print('Crossover')
         children = []
         for j in range(0, len(parents), 2):
-            child = bnc_pso_crossover(parents[j], parents[j+1], feasible_only)
-            children.append(child)
+            if random.random() < crossover_rate:
+                c1, c2 = crossover_operator(parents[j], parents[j+1], feasible_only)
+        
+            else:
+                c1 = copy.deepcopy(parents[j])
+                c2 = copy.deepcopy(parents[j+1])
+            children.append(c1)
+            children.append(c2)
+
         # Mutation
-        if verbose:
-            print('Mutation')
         for child in children:
             if random.random() < mutation_rate:
-                child.bit_flip_mutation(feasible_only)
+                child = mutation(child)
+
         # Evaluate children
         if verbose:
             print('Evaluating children')
         for child in children:
             child.compute_bic(data)
-        # Select survivors
+
+        # Select survivors by tournament or rank
         if verbose:
             print('Selecting survivors')
         population = select_best(population + children, pop_size, data)
+
+        # Print standard deviation of population scores
+        if verbose:
+            print('Standard deviation of population scores:', statistics.stdev([i.bic for i in population]))
         # Update best graph
         if verbose:
             print('Updating best graph')
-        best = select_best(population, 1, data)[0]
-        if best.compute_bic(data) < best_score:
-            best_score = best.compute_bic(data)
+        
+        # Sort population to take the best
+        #population = select_best(population, len(population), data)
+        best = population[0]
+
+        # Check if goal is reached
+        eps = 1e-6
+        if best.bic < goal_bic + eps:
+            best_graph = best
+            break
+        
+        if best.bic < best_score:
+            best_score = best.bic
             best_graph = best
             count_patience = 0
         else:
@@ -189,6 +215,7 @@ def evolve_DAGs (population, max_iter, mutation_rate, crossover_rate, patience, 
 def compute_metrics(run_both = False, alg = 'bic'):
     best_score_bic = BIC(best_graph, data)
     best_score_ls = lagrangian(best_graph, data)
+    cross = args.crossover_function
 
     # Hamming distance
     SLF, TLF = learning_factors(ground_truth, best_graph)
@@ -197,21 +224,21 @@ def compute_metrics(run_both = False, alg = 'bic'):
     print('Saving results')
 
     if run_both:
-        filename = PATH +f'results_{args.data}_both.csv'
+        filename = PATH +f'results_{args.data}_both_{cross}.csv'
         with open(filename, 'a', newline='') as file:
             writer = csv.writer(file)
             writer.writerow([args.data, args.sample_size, args.max_iter, args.mutation_rate, 
-                            args.crossover_rate, args.popSize, args.patience, args.density_factor, alg, 
+                            args.crossover_rate, args.popSize, args.patience, alg, 
                             args.feasible_only_init_pop, best_score_bic, best_score_ls, SLF, TLF])
     
     else:
-        filename = PATH +f'results_{args.data}_{"feasible" if args.feasible_only else "infeasible"}.csv'
+        filename = PATH +f'results_{args.data}_{"feasible" if args.feasible_only else "infeasible"}_{cross}.csv'
     
         with open(filename, 'a', newline='') as file:
             writer = csv.writer(file)
             writer.writerow([args.data, args.sample_size, args.max_iter, args.mutation_rate, 
-                            args.crossover_rate, args.popSize, args.patience, args.density_factor, args.feasible_only, 
-                            args.feasible_only_init_pop, best_score_bic, best_score_ls, SLF, TLF])
+                            args.crossover_rate, args.popSize, args.patience, args.feasible_only, 
+                            args.feasible_only_init_pop, args.selection_pressure, best_score_bic, best_score_ls, SLF, TLF])
 
 
     # Save best graph
@@ -241,6 +268,7 @@ if __name__ == '__main__':
     parser.add_argument('--popSize', type=int, help='Population size.')
     parser.add_argument('--patience', type=int, help='Max number of iterations without improvement.')
     parser.add_argument('--mu', type=float, help='Lagrangian multiplier.')
+    parser.add_argument('--selection_pressure', type=float, help='Selection pressure for rank selection.')
     parser.add_argument('--feasible_only', action='store_true')
     parser.add_argument('--no-feasible_only', dest='feasible_only', action='store_false')
     parser.add_argument('--feasible_only_init_pop', action='store_true')
@@ -249,24 +277,15 @@ if __name__ == '__main__':
     parser.add_argument('--num_runs', type=int, help='Number of runs', default=1)
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--no-verbose', dest='verbose', action='store_false')
+    parser.add_argument('--crossover_function', type=str, help='Crossover function to be used.', default='bnc_pso')
     args = parser.parse_args()
 
     PATH = define_path_to_save(args.data, args.feasible_only)
 
-    if args.data == 'asia':
-        data = load_asia_data(sample_size=args.sample_size)
-        ground_truth = load_gt_network_asia()
-        print('Asia data and ground truth loaded')
-    elif args.data == 'adult':
-        data = load_adult_data(sample_size=args.sample_size)
-        ground_truth = load_gt_adult()
-        print('Adult data and grount truth loaded')
-    else:
-        # dataset not available
-        print('Dataset not available.')
-        exit(1)
 
-    print(data.head())
+
+    print("Using crossover function:", args.crossover_function)
+
     # Parameters
     max_iter = args.max_iter
     mutation_rate = args.mutation_rate
@@ -275,31 +294,54 @@ if __name__ == '__main__':
     patience = args.patience
     feasible_only = args.feasible_only
     mu = args.mu
-
-
+    selction_pressure = args.selection_pressure
     n_runs = args.num_runs
+
 
     time_vector = []
     for i in range(n_runs):
+
+        # Load data
+        if args.data == 'asia':
+            data = load_asia_data(sample_size=args.sample_size)
+            ground_truth = load_gt_network_asia()
+            print('Asia data and ground truth loaded')
+        elif args.data == 'child':
+            data = load_child_data(sample_size=args.sample_size)
+            ground_truth = load_gt_network_child()
+            print('Child data and ground truth loaded')
+        else:
+            # dataset not available
+            print('Dataset not available.')
+            exit(1)
+
+        goal_bic = BIC(ground_truth, data)
+        print('Goal BIC:', goal_bic)
+
         # measure time
         start = time.time()
+
         # Create initial population
         nodes = data.columns
         nodes = list(nodes)
+        print("Creating initial population")
         population = create_population(pop_size, nodes, data, feasible_only=args.feasible_only_init_pop)
+
         # Evolve population
-        best_graph, bic_history, population = evolve_DAGs(population, max_iter, mutation_rate, crossover_rate, patience, feasible_only, verbose=args.verbose)
-
-        # Draw BIC history
-        plt.figure()
-        plt.plot(bic_history)
-        plt.savefig(PATH + 'bic_history.png')
-
-        # Draw best graph
-        plt.figure()
-        nx.draw(best_graph.individual_to_digraph(), with_labels=True)
-        plt.savefig(PATH + 'best_graph.png')
-
+        print("Evolving population")
+        best_graph, bic_history, population = evolve_DAGs(population, max_iter, mutation_rate, 
+                                                          crossover_rate, patience, selction_pressure, goal_bic, args.crossover_function, feasible_only, verbose=args.verbose)
+        print("best graph returned BIC")
+        print(best_graph.bic)
+        print("first ind bic")
+        print(population[0].bic)
+        print("bic of all inds")
+        for ind in population:
+            print(ind.compute_bic(data))
+        
+        best_graph = best_graph.individual_to_digraph()
+        # Compute metrics
+        compute_metrics(run_both=args.run_both, alg='bic')
 
         print("Algorithm ended. Computing Results")
         end = time.time()

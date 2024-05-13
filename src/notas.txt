@@ -1,0 +1,20 @@
+Fazer torneio para selecionar sobreviventes com parcela de elitismo (10%)
+seleção dos pais por torneio
+imprimir desvio padrão do BIC da população toda a cada iteração (verificar diversidade)
+Imprimir a média e o melhor BIC por iteração
+Verificar se realmente o melhor grafo é selecionado
+Implementar um operador de mutação no espaço de grafos, em que três operações são possíveis: adição, remoção e reversão de cada aresta. as três operações possuem mesma probabilidade de ocorrer (em função do estado do bit)
+Critério de paciência pode matar o algoritmo cedo demais 
+População inicial pode conter grafos lineares demais (parece que não)
+Aparentemente, a configuração ideal do GA é utilizar RANK para selecionar os pais e TORNEIO para selecionar os sobreviventes
+linha 29 a 39 asia: s = 1.2; linha 39 em diante s=1.8 (pressão maior)
+Dois grafos podem possuir exatamente o mesmo BIC e SLF diferentes? Sim, teste confirmou
+após corrigir o bug da ordenação, o SLF parece piorar ligeiramente, mas os BIC encontrados são melhores-> falta introduzir o critério de parada do BIC do gt
+
+
+09/05
+Sobre o comportamento do BIC e MQ: dois grafos com BIC e MQ quase idênticos, mesmo TLF (1.0) e SLF diferentes (1.0 e 0.825); o BIC é ligeiramente maior no caso do grafo exato, enquanto o MQ é ligeiramente pior
+acrescentar critério de parada BIC = BIC(gt, sample)
+implementar elitismo na seleção dos sobreviventes, de maneira determinística: os 'pop_size' melhores são perpetuados
+implementar MAGA
+
