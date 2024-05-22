@@ -23,143 +23,69 @@ import matplotlib.pyplot as plt
 import argparse
 import copy
 
-def select_best(population, n, data):
-    '''
-    Select the n best individuals from a population.
-
-    Parameters:
-    -----------
-    population : list
-        List containing the population of DAGs.
-    n : int
-        Number of individuals to be selected.
-    score_function : function
-        Function used to compute the score of each individual.
-    data : pandas.DataFrame
-        Dataset used to compute the score.
-    
-    Returns:
-    --------
-    list
-        List containing the selected individuals.
-    '''
-    # Select best individuals
-    scores = [i.compute_bic(data) if i.bic == None else i.bic for i in population]
-    rank = np.argsort(scores)
-    best_n = rank[:n]
-    return list(population[i] for i in best_n)
-
-def select_parents_by_rank(population, num_parents, selection_pressure, data):
-    '''
-    Select parents from a population using rank-based selection.
-
-    Parameters:
-    -----------
-    population : list
-        List containing the population of DAGs.
-    num_parents : int
-        Number of parents to be selected.
-    data : pandas.DataFrame
-        Dataset used to compute the score.
-    
-    Returns:
-    --------
-    list
-        List containing the selected parents.
-    '''
-    # Rank population
-    population = select_best(population, len(population), data)
-    # Compute rank probabilities
-    s = selection_pressure # Selection pressure between 1 and 2 as described in Eiben and Smith (2003)
-    mu = len(population)
-    rank_probs = [(2-s)/mu + 2*(i)*(s-1)/(mu*(mu-1)) for i in range(1, mu+1)]
-    rank_probs = rank_probs[::-1]
-    # Select parents
-    parents = random.choices(population, weights=rank_probs, k=num_parents)
-    return parents
-
-def select_parents_by_tournament(population, num_parents, data):
-    '''
-    Select parents from a population using tournament selection.
-
-    Parameters:
-    -----------
-    population : list
-        List containing the population of DAGs.
-    num_parents : int
-        Number of parents to be selected.
-    data : pandas.DataFrame
-        Dataset used to compute the score.
-    
-    Returns:
-    --------
-    list
-        List containing the selected parents.
-    '''
-    parents = []
-    for _ in range(num_parents):
-        # Select random individuals
-        tournament = random.sample(population, 2)
-        # Select best individual
-        best = select_best(tournament, 1, data)[0]
-        parents.append(best)
-    return parents
 
 
-def findNeighbors(i, j, L):
-    if i == 0:
-        i1 = L - 1
-    else:
-        i1 = i - 1
-    if i == L - 1:
-        i2 = 0
-    else:
-        i2 = i + 1
-    if j == 0:
-        j1 = L - 1
-    else:
-        j1 = j - 1
-    if j == L - 1:
-        j2 = 0
-    else:
-        j2 = j + 1
-    return [i1, j1, i2, j2]
+def MAGA(population, max_iter, Pm_min, Pm_max, Po, Pc_min, Pc_max, t_max, goal_bic, sL, sPm, sGen, feasible_only, verbose=False):
 
-def MAGA(population, max_iter, mutation_rate, crossover_rate, patience, selection_pressure, goal_bic, crossover_function, feasible_only, verbose=False):
+    best_bic = float('inf')
+    best_graph = None
+    best_pos = 0
+    iteration = 0
+    t = 0
+    while (best_bic > goal_bic + 0.00000001) and (iteration < max_iter):
+        if verbose:
+            print('Iteration:', iteration)
+        Pc=(Pc_min-t*(Pc_min-Pc_max)/t_max)
+        Pm=(Pm_min-t*(Pm_min-Pm_max)/t_max)
+        t += 1
+        best_ind = 0
+        for agent_idx in range(len(population)):
+            aux_best_bic = population[agent_idx].bic if population[agent_idx].bic != None else population[agent_idx].compute_bic(data)
+            aux_best_idx = agent_idx
+            if random.uniform(0,1) < Pc:
+                best_neighbor = find_best_neighbor(population, agent_idx)
+                if population[agent_idx].bic > population[best_neighbor].bic:
+                    child1, child2 = bnc_pso_crossover(population[agent_idx], population[best_neighbor], feasible_only)
+                    child1.compute_bic(data)
+                    child2.compute_bic(data)
+                    # current agent receives best child's fenotype
+                    best_child = child1 if child1.bic < child2.bic else child2
+                    population[agent_idx].update_fenotype(best_child)
+                    aux_best_bic = population[agent_idx].bic
+            if aux_best_bic < population[best_ind].bic:
+                best_ind = aux_best_idx
+        total_m = round(len(population) * len(population[0].nodes) * Pm)
+        aux_m = 0
+        while aux_m < total_m:
+            aux_rand = random.randint(0, len(population)-1)
+            if aux_rand != best_ind:
+                aux_m += 1
+                agent_before_mutation = copy.deepcopy(population[aux_rand])
+                new_agent = mutation(agent_before_mutation, feasible_only)
+                new_agent.compute_bic(data)
+                if new_agent.bic < agent_before_mutation.bic:
+                    population[aux_rand].update_fenotype(new_agent)
+                    aux_m += 1
+                elif random.uniform(0,1) < Po:
+                    population[aux_rand].update_fenotype(new_agent)
+                    aux_m += 1
+        for agent in population:
+            if agent.bic < best_bic:
+                best_bic = agent.bic
+                best_graph = agent
+                best_pos = agent.pos
+        sBest = self_learning(sL, best_graph, sPm, Po, sGen, data, feasible_only)
+        population[best_pos[0]] = sBest
+        iteration += 1
 
-    pass
+    return best_graph, best_graph.bic, population
 
-
-
-def compute_metrics(run_both = False, alg = 'bic'):
+def compute_metrics():
     best_score_bic = BIC(best_graph, data)
     best_score_ls = lagrangian(best_graph, data)
-    cross = args.crossover_function
 
     # Hamming distance
     SLF, TLF = learning_factors(ground_truth, best_graph)
-
-    # Save results
-    print('Saving results')
-
-    if run_both:
-        filename = PATH +f'results_{args.data}_both_{cross}.csv'
-        with open(filename, 'a', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow([args.data, args.sample_size, args.max_iter, args.mutation_rate, 
-                            args.crossover_rate, args.popSize, args.patience, alg, 
-                            args.feasible_only_init_pop, best_score_bic, best_score_ls, SLF, TLF])
-    
-    else:
-        filename = PATH +f'results_{args.data}_{"feasible" if args.feasible_only else "infeasible"}_{cross}.csv'
-    
-        with open(filename, 'a', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow([args.data, args.sample_size, args.max_iter, args.mutation_rate, 
-                            args.crossover_rate, args.popSize, args.patience, args.feasible_only, 
-                            args.feasible_only_init_pop, args.selection_pressure, best_score_bic, best_score_ls, SLF, TLF])
-
-
     # Print Results
     print('Best graph:', best_graph.edges())
     print('Best score BIC:', best_score_bic)
@@ -167,10 +93,19 @@ def compute_metrics(run_both = False, alg = 'bic'):
     print('Structure Learning Factor:', SLF)
     print('Topology Learning Factor:', TLF)
 
+    # Save results
+    print('Saving results')
+
+    filename = PATH +f'results_{args.data}.csv'
+
+    with open(filename, 'a', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow([args.data, args.sample_size, args.max_iter, best_score_bic, best_score_ls, SLF, TLF])
+
     # Draw best graph
     plt.figure()
     nx.draw(best_graph, with_labels=True)
-    plt.savefig(PATH + 'best_graph_' + alg + '.png')
+    plt.savefig(PATH + 'best_graph_' + '.png')
 
 
 if __name__ == '__main__':
@@ -180,39 +115,42 @@ if __name__ == '__main__':
     parser.add_argument('--sample_size', type=int, help='Number of samples to be used.')
     parser.add_argument('--data', type=str, help='Name of the dataset.')
     parser.add_argument('--max_iter', type=int, help='Maximum number of iterations.')
-    parser.add_argument('--mutation_rate', type=float, help='Probability of mutation.')
-    parser.add_argument('--crossover_rate', type=float, help='Probability of crossover.')
-    parser.add_argument('--popSize', type=int, help='Population size.')
-    parser.add_argument('--patience', type=int, help='Max number of iterations without improvement.')
+    parser.add_argument('--sGen', type=int, help='Maximum number of iterations in self learning.')
+    parser.add_argument('--sPm', type=float, help='Mutation probability inside self learning.')
+    parser.add_argument('--Po', type=float, help='Prob of keeping worse individual.')
+    parser.add_argument('--Pm_min', type=float, help='Min probability of mutation.')
+    parser.add_argument('--Pm_max', type=float, help='Max probability of mutation.')
+    parser.add_argument('--Pc_min', type=float, help='Min probability of crossover.')
+    parser.add_argument('--Pc_max', type=float, help='Max probability of crossover.')
+    parser.add_argument('--L_size', type=int, help='Grid size.')
+    parser.add_argument('--sL', type=int, help='Small Grid size.')
     parser.add_argument('--mu', type=float, help='Lagrangian multiplier.')
-    parser.add_argument('--selection_pressure', type=float, help='Selection pressure for rank selection.')
     parser.add_argument('--feasible_only', action='store_true')
     parser.add_argument('--no-feasible_only', dest='feasible_only', action='store_false')
     parser.add_argument('--feasible_only_init_pop', action='store_true')
     parser.add_argument('--no-feasible_only_init_pop', dest='feasible_only_init_pop', action='store_false')
-    parser.add_argument('--run_both', action='store_true')
     parser.add_argument('--num_runs', type=int, help='Number of runs', default=1)
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--no-verbose', dest='verbose', action='store_false')
-    parser.add_argument('--crossover_function', type=str, help='Crossover function to be used.', default='bnc_pso')
     args = parser.parse_args()
 
-    PATH = define_path_to_save(args.data, args.feasible_only)
-
-
-
-    print("Using crossover function:", args.crossover_function)
+    #PATH = define_path_to_save(args.data, args.feasible_only)
+    PATH = '/home/joao/Desktop/UFMG/PhD/code/EA-DAG/results/MAGA/' + args.data + '/' 
 
     # Parameters
     max_iter = args.max_iter
-    mutation_rate = args.mutation_rate
-    crossover_rate = args.crossover_rate
-    pop_size = args.popSize
-    patience = args.patience
+    Pm_min = args.Pm_min
+    Pm_max = args.Pm_max
+    Po = args.Po
+    Pc_min = args.Pc_min
+    Pc_max = args.Pc_max
     feasible_only = args.feasible_only
     mu = args.mu
-    selction_pressure = args.selection_pressure
     n_runs = args.num_runs
+    L_size = args.L_size
+    sL = args.sL
+
+    t_max = 10
 
 
     time_vector = []
@@ -242,12 +180,13 @@ if __name__ == '__main__':
         nodes = data.columns
         nodes = list(nodes)
         print("Creating initial population")
-        population = create_population(pop_size, nodes, data, feasible_only=args.feasible_only_init_pop)
+        population = create_MAGA_population(L_size, nodes, data, feasible_only=args.feasible_only_init_pop)
 
         # Evolve population
         print("Evolving population")
-        best_graph, bic_history, population = MAGA(population, max_iter, mutation_rate, 
-                                                          crossover_rate, patience, selction_pressure, goal_bic, args.crossover_function, feasible_only, verbose=args.verbose)
+        #def MAGA(population, max_iter, Pm_min, Pm_max, Po, Pc_min, Pc_max, t_max, goal_bic, sL, sPm, sGen, feasible_only, verbose=False):
+        best_graph, _, population = MAGA(population, max_iter, Pm_min, Pm_max, Po, Pc_min,
+                                                   Pc_max, t_max, goal_bic, sL, args.sPm, args.sGen, feasible_only, verbose=args.verbose)
         print("best graph returned BIC")
         print(best_graph.bic)
         print("first ind bic")
@@ -258,7 +197,7 @@ if __name__ == '__main__':
         
         best_graph = best_graph.individual_to_digraph()
         # Compute metrics
-        compute_metrics(run_both=args.run_both, alg='bic')
+        compute_metrics()
 
         print("Algorithm ended. Computing Results")
         end = time.time()

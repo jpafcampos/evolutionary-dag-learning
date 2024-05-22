@@ -18,17 +18,30 @@ import gc
 from utils import *
 from loaders import *
 import matplotlib.pyplot as plt
+import copy
+
 
 class Individual():
     def __init__(self, genes, nodes):
         self.genes = genes
         self.nodes = nodes
         self.bic = None
+        self.pos = None
+        self.neighbors = []
+
+    def init_agent(self, i, j, L_size):
+        self.pos = [i * L_size + j]
+        list_neigh = findNeighbors(i, j, L_size)
+        self.neighbors = [list_neigh[0] * (L_size) + j, i * (L_size) + list_neigh[1], list_neigh[2] * (L_size) + j, i * (L_size) + list_neigh[3]]
 
     def init_random(self, num_nodes, sparsity=0.5):
         G = nx.gnp_random_graph(num_nodes, sparsity, directed=True)
         genes = nx.adjacency_matrix(G).todense().flatten().tolist()
         self.genes = genes
+
+    def update_fenotype(self, other):
+        self.bic = other.bic
+        self.genes = other.genes
 
     def init_from_genes(self, genes):
         self.genes = genes
@@ -112,6 +125,25 @@ class Individual():
     def __str__(self):
         return str(self.genes) + ' - '
     
+def findNeighbors(i, j, L):
+    if i == 0:
+        i1 = L - 1
+    else:
+        i1 = i - 1
+    if i == L - 1:
+        i2 = 0
+    else:
+        i2 = i + 1
+    if j == 0:
+        j1 = L - 1
+    else:
+        j1 = j - 1
+    if j == L - 1:
+        j2 = 0
+    else:
+        j2 = j + 1
+    return [i1, j1, i2, j2]
+
 
 def mutation(individual, feasible_only=True):
     '''
@@ -255,7 +287,7 @@ def single_point_crossover(parent1, parent2, feasible_only=False):
     else:
         return child2
 
-def bnc_pso_crossover(parent1, parent2, feasible_only=False):
+def bnc_pso_crossover(parent1, parent2, feasible_only=True):
     child1 = Individual([], parent1.nodes)
     child2 = Individual([], parent1.nodes)
     for i in range(len(parent1.genes)):
@@ -348,9 +380,118 @@ def create_population(pop_size, nodes, data, feasible_only=True):
         pop.append(individual)
     return pop
 
-    
-    
 
+def create_MAGA_population(L_size, nodes, data, feasible_only=True):
+    '''
+    Creates a population of individuals in a GRID for MAGA algorithm.
+
+    Parameters:
+    -----------
+    L_size : int
+        The size of the side of the square grid.
+    nodes : list
+        The list of nodes.
+    feasible_only : bool
+        Whether to create only feasible individuals.
+
+    Returns:
+    --------
+    list
+        The population.
+    '''
+    pop = []
+    for i in range(L_size):
+        for j in range(L_size):
+            individual = Individual([], nodes)
+            sparsity = 0.1
+            #print("initializing individual randomly")
+            individual.init_random(num_nodes = len(nodes), sparsity=sparsity)
+            #print("individual created, fixing connectivity and cycles")
+            if feasible_only:
+                #print("FEASIBLE ONLY, LETS CHECK")
+                if not individual.is_dag():
+                    #print("repairing cycles")
+                    individual.repair_dag()
+                if not individual.is_connected():
+                    #print("repairing connectivity")
+                    individual.repair_connectivity()
+            #print("individual fixed, computing BIC")
+            individual.compute_bic(data)
+            individual.init_agent(i, j, L_size)
+            pop.append(individual)
+    return pop
+
+
+def s_create_agents(L_size, best_graph, data, feasible_only=True):
+    agents = []
+    genes = best_graph.genes
+    nodes = best_graph.nodes
+    for i in range(L_size):
+        for j in range(L_size):
+            ind = Individual(genes, nodes)
+            ind.init_agent(i, j, L_size)
+            ind.compute_bic(data)
+            if i == 0 and j == 0:
+                agents.append(ind)
+            else:
+                mutated_ind = mutation(ind, feasible_only=feasible_only)
+                mutated_ind.compute_bic(data)
+                agents.append(mutated_ind)
+    return agents
+
+def find_best_neighbor(agents, index):
+    #print('len')
+    #print(len(agents))
+    #print('index')
+    #print(index)
+    best_neighbor = agents[index].neighbors[0]
+    best_neighbor_score = agents[best_neighbor].bic
+    for i in range(1,4):
+        if best_neighbor_score > agents[agents[index].neighbors[i]].bic:
+            best_neighbor_score = agents[best_neighbor].bic
+            best_neighbor = agents[index].neighbors[i]
+
+    # returns index of best neighbor
+    return best_neighbor
+
+def self_learning(sL_size, best_graph, mutation_prob, keep_mutation_prob, max_iter, data, feasible_only=True):
+
+    sBest = best_graph
+    sBest_score = sBest.bic
+    sAgents = s_create_agents(sL_size, sBest, data, feasible_only)
+    
+    for _ in range(max_iter):
+        for agent_idx in range(len(sAgents)):
+            # find best neighbor
+            best_neighbor = find_best_neighbor(sAgents, agent_idx)
+            # crossover
+            child1, child2 = bnc_pso_crossover(sAgents[agent_idx], sAgents[best_neighbor], feasible_only)
+            child1.compute_bic(data)
+            child2.compute_bic(data)
+            # new_agent is the best of the children
+            best_child = child1 if child1.bic < child2.bic else child2
+            sAgents[agent_idx].update_fenotype(best_child)
+
+        # mutation
+        total_mutations = round(len(sAgents)*len(sAgents[agent_idx].nodes) * mutation_prob)
+        mutation_counter = 0
+        while mutation_counter < total_mutations:
+            aux_rand = random.randint(0, len(sAgents)-1)
+            agent_before_mutation = copy.deepcopy(sAgents[aux_rand])
+            new_agent = mutation(agent_before_mutation, feasible_only)
+            score = new_agent.compute_bic(data)
+            if score < sAgents[aux_rand].bic:
+                sAgents[aux_rand].update_fenotype(new_agent)
+                mutation_counter += 1
+            elif random.random() < keep_mutation_prob:
+                sAgents[aux_rand].update_fenotype(new_agent)
+                mutation_counter += 1
+            
+        for agent in sAgents:
+            if agent.bic < sBest_score:
+                sBest = agent
+
+    return sBest
 
 
 

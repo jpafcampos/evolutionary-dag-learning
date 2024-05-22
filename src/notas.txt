@@ -18,3 +18,7 @@ acrescentar critério de parada BIC = BIC(gt, sample)
 implementar elitismo na seleção dos sobreviventes, de maneira determinística: os 'pop_size' melhores são perpetuados
 implementar MAGA
 
+Dúvida: parametro t_max no MAGA, que controla as probabilidades de mutacao e cruzamento
+
+
+MAGA for global numerical optimization = usar para versão contínua
