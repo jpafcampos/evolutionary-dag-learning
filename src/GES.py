@@ -22,85 +22,102 @@ import matplotlib.pyplot as plt
 import argparse
 import copy
 
+import math
+from itertools import permutations
 
+from scipy.stats import multivariate_normal
+from pgmpy.estimators import BDeuScore, K2Score, BicScore
+from pgmpy.models import BayesianModel
+
+def bic_score(dag, data):
+    bic = BicScore(data)
+    if len(dag.edges()) == 0:
+        return float('inf')
+    model = BayesianNetwork(list(dag.edges()))
+    score = np.abs(bic.score(model))
+    return score
+
+def get_connected_nodes(graph):
+    # Initialize an empty set to store nodes with at least one edge
+    nodes_with_edges = set()
+
+    # Iterate through the edges to collect nodes
+    for edge in graph.edges():
+        nodes_with_edges.update(edge)
+
+    # Convert the set to a list (if needed)
+    nodes_with_edges_list = list(nodes_with_edges) 
+
+    return nodes_with_edges_list
 
 def FES(graph, data, nodes, bics, goalscore):
+    bic = BicScore(data)
     again=True
-    bic = BIC(graph, data)
-
+    #bic = BIC(graph, data)
+    score = float('inf')
+    count = 0
+    edges_and_deltas = {}
+    best_delta = 0
     while(again):
-        aux_graph=copy.deepcopy(graph)
-        new_graph=copy.deepcopy(graph)
-        best_bic=bic
-        no_add=True
+        # get set of candidate edges
+        potential_new_edges = (set(permutations(nodes, 2)) - set(graph.edges()) - set([(y, x) for x, y in graph.edges()]))
 
-        if best_bic<(goalscore+0.00000001):
-            break;
-        for i in nodes:
-            for j in nodes:
-                if i !=j:
-                    if not aux_graph.has_edge(i,j):                
-                        aux_graph.add_edge(i,j)
-                        if nx.is_directed_acyclic_graph(aux_graph):
-                            [bic,aux_bic]=BIC(aux_graph, data) 
-                            bic=abs(bic)
-                            if best_bic>bic:
-                                no_add=False
-                                new_graph=copy.deepcopy(aux_graph)
-                                best_bic=bic
-                                bics.append(best_bic)
-                            else:
-                                bics.append(best_bic)
-                        aux_graph.remove_edge(i,j)
-        graph=copy.deepcopy(new_graph)
-        bic=best_bic
-        if no_add:
-            again=False
-    return new_graph,best_bic,aux_bic,bics
+        for x, y in potential_new_edges:
+            if not nx.has_path(graph, y, x):
+                old_parents = list(graph.predecessors(y))
+                new_parents = old_parents + [x]
+                score_delta = bic.local_score(y, new_parents) - bic.local_score(y, old_parents)
+                edges_and_deltas[(x, y)] = score_delta
+                if score_delta < best_delta:
+                    best_delta = score_delta
+                    best_edge = (x, y)
+        print(best_edge)
+        #print(graph.edges())
+        # if edge already exists, break
+        if best_edge in graph.edges():
+            break
+        if best_delta < 0:
+            graph.add_edge(best_edge[0], best_edge[1])
+            bics.append(bic.score(graph))
+        
+    return graph, 0, 0
+
 
 def BES(graph, data, nodes, bics, goalscore):
-    again = True
-    bic = BIC(graph, data)
+    bic = BicScore(data)
+    again=True
+    #bic = BIC(graph, data)
+    score = float('inf')
+    count = 0
+    best_delta = 0
+
     while(again):
-        aux_graph = copy.deepcopy(graph)
-        new_graph = copy.deepcopy(graph)
-        bic = abs(bic)
-        best_bic = bic
-        if best_bic<(goalscore+0.00000001):
-            break;            
-        no_add = True
-        for i in nodes:
-            for j in nodes:
-                if i !=j:
-                    if aux_graph.has_edge(i,j):                
-                        aux_graph.remove_edge(i,j)
-                        if nx.is_directed_acyclic_graph(aux_graph):
-                            bic = BIC(aux_graph, data) 
-                            bic = abs(bic)
-                            #print(bic)
-                            if best_bic>bic:
-                                no_add = False
-                                new_graph = copy.deepcopy(aux_graph)
-                                best_bic=bic
-                                bics.append(best_bic)
-                            else:
-                                bics.append(best_bic)
-                        aux_graph.add_edge(i,j)
-        graph = copy.deepcopy(new_graph)
-        bic = best_bic
-        if no_add:
-            again = False
-    return new_graph, best_bic, bics
+
+        for x, y in graph.edges():
+            old_parents = list(graph.predecessors(y))
+            new_parents = [var for var in old_parents if var != x]
+            score_delta = bic.local_score(y, new_parents) - bic.local_score(y, old_parents)
+            if score_delta < best_delta:
+                best_delta = score_delta
+                best_edge = (x, y)
+            
+        if best_delta < 0:
+            graph.remove_edge(best_edge[0], best_edge[1])
+            bics.append(bic.score(graph))
+        else:
+            break
+
+    return graph, 0, 0
+  
 
 def GES(nodes, data, goalscore):
-    aux_bic = 0
     graph = nx.DiGraph()
     for a in nodes:
         graph.add_node(a)
     bics = []
-    [graph, bic, aux_bic, bics] = FES(graph, data, nodes, bics, goalscore)
-    [graph, bic, aux_bic, bics] = BES(graph, data, nodes, bics, goalscore)
-    return graph, bic, aux_bic, bics
+    graph, bic, bics = FES(graph, data, nodes, bics, goalscore)
+    graph, bic, bics = BES(graph, data, nodes, bics, goalscore)
+    return graph, bic, bics
 
 
 def compute_metrics():
@@ -172,13 +189,14 @@ if __name__ == '__main__':
         # Create list of nodes
         nodes = data.columns
         nodes = list(nodes)
+        print(nodes)
 
         # Run GES
         print("Running GES")
-        best_graph = GES(nodes, data, goal_bic)
+        best_graph, bic, bics = GES(nodes, data, goal_bic)
 
         print("best graph returned BIC")
-        print(best_graph.bic)
+        print(BIC(best_graph, data[get_connected_nodes(best_graph)]))
 
         # Compute metrics
         compute_metrics()

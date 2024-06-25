@@ -13,8 +13,11 @@ import statistics
 import bnlearn as bn
 from pgmpy.metrics import structure_score
 from pgmpy.models import BayesianNetwork
+from pgmpy.estimators import ScoreCache
+from pgmpy.estimators import BicScore, K2Score, BDeuScore
 import gc
 from matplotlib import pyplot as plt
+
 
 
 def BIC(G, data):
@@ -43,9 +46,14 @@ def BIC(G, data):
 
     # G is converted to a BayesianNetwork Model in pgmpy
     # the bic is computed using the pgmpy function structure_score
+    scoring_method = ScoreCache(BicScore(data), data).local_score
+    score = 0
+    for node in G.nodes():
+        parents = list(G.predecessors(node))
+        score += scoring_method(node, parents)
 
-    model = BayesianNetwork(list(G.edges()))
-    score = np.abs(structure_score(model, data, scoring_method="bic"))
+    score = -score
+    
     return score
 
 def least_squares(G, data):
@@ -163,86 +171,6 @@ def lagrangian(G, data, mu=4):
 
     return lagrangian
 
-
-def srt_network(G,rdados,auxn):
-    """Função que transforma uma rede em string
-    Entrada: G= Grafo
-             rdados= dados no formato da biblioteca do R
-             auxn= Variável que calcula quantas vezes foi calculado a métrica BIC
-    Saída: string_bn= string referente ao grafo G"""
-    auxn+=1
-    string_bn=""
-    for i in G.nodes():
-        string_bn+="["+i
-        aux=0
-        for j in G.predecessors(i):
-            if aux==0:
-                string_bn+="|"
-                aux+=1
-            else:
-                string_bn+=":"
-            string_bn+=j
-        string_bn+="]"
-    return string_bn
-
-def learning_factors(target,ind1):
-    TC=0
-    TE=len(target.edges())
-    IE=0
-    for i in target.edges():
-        if ind1.has_edge(i[0],i[1]):
-            TC+=1
-        if ind1.has_edge(i[1],i[0]):
-            IE+=1
-    SLF=TC/TE
-    TLF=(TC+IE)/TE
-
-    return SLF,TLF
-    
-def F1Score(target,ind1,nodes):
-    '''
-    Computes the F1 score between a target and a candidate graph
-    Parameters:
-    -----------
-    target : networkx.DiGraph
-        Target graph.
-    ind1 : networkx.DiGraph
-        Candidate graph.
-    nodes : list
-        List of nodes in the graph.
-    Returns:
-    --------
-    float
-        F1 score between the target and the candidate graph.
-
-    '''
-    
-    TP=0 # True positive
-    FN=0 # False negative
-    FP=0 # False positive
-    TN=0 # True negative
-    for i in nodes:
-        for j in nodes:           
-            if i!=j:
-                if target.has_edge(i,j):
-                    if ind1.has_edge(i,j):
-                        TP+=1
-                    else:
-                        FN+=1
-                else:
-                    if ind1.has_edge(i,j):
-                        FP+=1
-                    else:
-                        TN+=1
-
-    precision=TP/(TP+FP)
-    recall=TP/(TP+FN)
-    accuracy=(TP+TN)/(TP+TN+FN+FP)
-    try:
-        f1score=2*(recall*precision)/(recall+precision)
-    except:
-        f1score=0
-    return f1score, accuracy,precision,recall
 
 
 def break_cyclessss(G):
@@ -384,38 +312,6 @@ def search_dag(G,edge_a,edge_b):
     return G
 
 
-
-def hamming_distance_digraph(G1, G2):
-    # Ensure both graphs are directed
-    if not G1.is_directed() or not G2.is_directed():
-        raise ValueError("Both input graphs must be directed graphs")
-
-    # Get edge sets of the graphs
-    edges1 = set(G1.edges())
-    edges2 = set(G2.edges())
-
-    # Calculate the symmetric difference of edge sets
-    symmetric_diff = edges1.symmetric_difference(edges2)
-
-    # Return the number of edges that differ (Hamming distance)
-    return len(symmetric_diff)
-
-def hamming_distance_undirected(G1, G2):
-    # Ensure both graphs are directed
-    if not G1.is_directed() or not G2.is_directed():
-        raise ValueError("Both input graphs must be directed graphs")
-
-    # Get undirected edge sets of the graphs
-    edges1 = set([(u, v) if u <= v else (v, u) for u, v in G1.edges()])
-    edges2 = set([(u, v) if u <= v else (v, u) for u, v in G2.edges()])
-
-    # Calculate the symmetric difference of undirected edge sets
-    symmetric_diff = edges1.symmetric_difference(edges2)
-
-    # Return the number of edges that differ (Hamming distance)
-    return len(symmetric_diff)
-
-
 def compute_mean_score(score_history):
     '''
     Computes the mean score for each iteration.
@@ -472,31 +368,6 @@ def compute_min_score(score_history):
     for i in range(len(score_history)):
         min_score.append(min(score_history[i]))
     return min_score
-
-def define_path_to_save(data, feasible_only):
-    '''
-    Defines the path to save the results.
-
-    Returns:
-    --------
-    str
-        Path to save the results.
-    '''
-    if feasible_only and data == 'asia':
-        path = '../results/asia_dag/'
-    elif feasible_only and data == 'adult':
-        path = '../results/adult_dag/'
-    elif not feasible_only and data == 'asia':
-        path = '../results/asia_freestyle/'
-    elif not feasible_only and data == 'adult':
-        path = '../results/adult_freestyle/'
-    elif data == 'child' and feasible_only:
-        path = '../results/child_dag/'
-    elif data == 'child' and not feasible_only:
-        path = '../results/child_freestyle/'
-    else:
-        path = '../results/'
-    return path
 
 def save_feasible_only_plots(PATH, bic_hist, ls_hist):
     best_score_hist_bic = compute_min_score(bic_hist)

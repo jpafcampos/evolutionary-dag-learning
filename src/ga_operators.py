@@ -14,8 +14,11 @@ import statistics
 import bnlearn as bn
 from pgmpy.metrics import structure_score
 from pgmpy.models import BayesianNetwork
+from pgmpy.estimators import BDeuScore, K2Score, BicScore
+from pgmpy.estimators import ScoreCache
 import gc
 from utils import *
+from eval_metrics import *
 from loaders import *
 import matplotlib.pyplot as plt
 import copy
@@ -26,15 +29,15 @@ class Individual():
         self.genes = genes
         self.nodes = nodes
         self.bic = None
-        self.pos = None
+        self.pos = None # position in MAGA grid
         self.neighbors = []
 
     def init_agent(self, i, j, L_size):
-        self.pos = [i * L_size + j]
+        self.pos = i * L_size + j
         list_neigh = findNeighbors(i, j, L_size)
         self.neighbors = [list_neigh[0] * (L_size) + j, i * (L_size) + list_neigh[1], list_neigh[2] * (L_size) + j, i * (L_size) + list_neigh[3]]
 
-    def init_random(self, num_nodes, sparsity=0.5):
+    def init_random(self, num_nodes, sparsity=0.1):
         G = nx.gnp_random_graph(num_nodes, sparsity, directed=True)
         genes = nx.adjacency_matrix(G).todense().flatten().tolist()
         self.genes = genes
@@ -111,10 +114,22 @@ class Individual():
             self.genes = adj.flatten().tolist()
     
     def compute_bic(self, data):
-        G = self.individual_to_digraph()
-        score = BIC(G, data)
+        scoring_method = ScoreCache(BicScore(data), data).local_score
+        score = 0
+        DAG = self.individual_to_digraph()
+        for node in DAG.nodes():
+            parents = list(DAG.predecessors(node))
+            score += scoring_method(node, parents)
+        
+        score = -score
         self.bic = score
+        
         return score
+
+    def compute_accuracy_metrics(self, target):
+        SLF, TLF = learning_factors(self.individual_to_digraph(), target)
+        f1score, accuracy, precision, recall, SHD = accuracy_metrics(self.individual_to_digraph(), target)
+        return f1score, accuracy, precision, recall, SHD, SLF, TLF
     
     def repair_dag(self):
         G = self.individual_to_digraph()
@@ -343,6 +358,7 @@ def uniform_crossover(parent1, parent2, feasible_only=False):
     return child1, child2
 
 def create_population(pop_size, nodes, data, feasible_only=True):
+    # function used for GA and BNC-PSO
     '''
     Creates a population of individuals.
 
@@ -423,6 +439,7 @@ def create_MAGA_population(L_size, nodes, data, feasible_only=True):
 
 
 def s_create_agents(L_size, best_graph, data, feasible_only=True):
+
     agents = []
     genes = best_graph.genes
     nodes = best_graph.nodes
@@ -431,12 +448,13 @@ def s_create_agents(L_size, best_graph, data, feasible_only=True):
             ind = Individual(genes, nodes)
             ind.init_agent(i, j, L_size)
             ind.compute_bic(data)
-            if i == 0 and j == 0:
+            if i ==  1 and j == 1:
                 agents.append(ind)
             else:
-                mutated_ind = mutation(ind, feasible_only=feasible_only)
+                copy_ind = copy.deepcopy(ind)
+                mutated_ind = mutation(copy_ind, feasible_only=feasible_only)
                 mutated_ind.compute_bic(data)
-                agents.append(mutated_ind)
+                agents.append(mutated_ind)         
     return agents
 
 def find_best_neighbor(agents, index):
@@ -448,15 +466,15 @@ def find_best_neighbor(agents, index):
     best_neighbor_score = agents[best_neighbor].bic
     for i in range(1,4):
         if best_neighbor_score > agents[agents[index].neighbors[i]].bic:
-            best_neighbor_score = agents[best_neighbor].bic
             best_neighbor = agents[index].neighbors[i]
+            best_neighbor_score = agents[best_neighbor].bic
 
     # returns index of best neighbor
     return best_neighbor
 
 def self_learning(sL_size, best_graph, mutation_prob, keep_mutation_prob, max_iter, data, feasible_only=True):
-
-    sBest = best_graph
+    num_eval_bic = 0
+    sBest = copy.deepcopy(best_graph)
     sBest_score = sBest.bic
     sAgents = s_create_agents(sL_size, sBest, data, feasible_only)
     
@@ -468,6 +486,7 @@ def self_learning(sL_size, best_graph, mutation_prob, keep_mutation_prob, max_it
             child1, child2 = bnc_pso_crossover(sAgents[agent_idx], sAgents[best_neighbor], feasible_only)
             child1.compute_bic(data)
             child2.compute_bic(data)
+            num_eval_bic += 2
             # new_agent is the best of the children
             best_child = child1 if child1.bic < child2.bic else child2
             sAgents[agent_idx].update_fenotype(best_child)
@@ -480,6 +499,7 @@ def self_learning(sL_size, best_graph, mutation_prob, keep_mutation_prob, max_it
             agent_before_mutation = copy.deepcopy(sAgents[aux_rand])
             new_agent = mutation(agent_before_mutation, feasible_only)
             score = new_agent.compute_bic(data)
+            num_eval_bic += 1
             if score < sAgents[aux_rand].bic:
                 sAgents[aux_rand].update_fenotype(new_agent)
                 mutation_counter += 1
@@ -491,7 +511,10 @@ def self_learning(sL_size, best_graph, mutation_prob, keep_mutation_prob, max_it
             if agent.bic < sBest_score:
                 sBest = agent
 
-    return sBest
+    if sBest.bic < best_graph.bic:
+        return sBest, num_eval_bic
+    else:
+        return best_graph, num_eval_bic
 
 
 

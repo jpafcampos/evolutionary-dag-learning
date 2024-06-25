@@ -17,6 +17,7 @@ from pgmpy.metrics import structure_score
 from pgmpy.models import BayesianNetwork
 import gc
 from utils import *
+from eval_metrics import *
 from ga_operators import *
 from loaders import *
 import matplotlib.pyplot as plt
@@ -108,7 +109,7 @@ def select_parents_by_tournament(population, num_parents, data):
 
 
 
-def evolve_DAGs (population, max_iter, mutation_rate, crossover_rate, patience, selection_pressure, goal_bic, crossover_function = 'bnc_pso', feasible_only=True, verbose=False):
+def evolve_DAGs (population, max_bic_eval, mutation_rate, crossover_rate, selection_pressure, goal_bic, file, feasible_only=True, verbose=False):
     '''
     Evolve a population of DAGs using a genetic algorithm.
     
@@ -137,14 +138,15 @@ def evolve_DAGs (population, max_iter, mutation_rate, crossover_rate, patience, 
     # Initialize auxiliary variables
     best_score = float('inf')
     best_graph = None
-    bic_history = []
-    count_patience = 0
+    num_bic_eval = 0
     pop_size = len(population)
+    reached_goal = False
+    local_minimum = False
 
-    crossover_operator = bnc_pso_crossover if crossover_function == 'bnc_pso' else uniform_crossover
+    crossover_operator = bnc_pso_crossover
 
     # Iterate
-    for i in range(max_iter):
+    while num_bic_eval < max_bic_eval:
         # Select parents
         if verbose:
             print('Iteration:', i)
@@ -164,15 +166,19 @@ def evolve_DAGs (population, max_iter, mutation_rate, crossover_rate, patience, 
             children.append(c2)
 
         # Mutation
+        new_children = []
         for child in children:
             if random.random() < mutation_rate:
                 child = mutation(child)
+            new_children.append(child)
+        children = new_children
 
         # Evaluate children
         if verbose:
             print('Evaluating children')
         for child in children:
             child.compute_bic(data)
+            num_bic_eval += 1
 
         # Select survivors by tournament or rank
         if verbose:
@@ -189,61 +195,42 @@ def evolve_DAGs (population, max_iter, mutation_rate, crossover_rate, patience, 
         # Sort population to take the best
         #population = select_best(population, len(population), data)
         best = population[0]
+        #bic_history.append(best.bic)
+        write_metrics_history(file, best, goal_bic, ground_truth, data)
 
         # Check if goal is reached
         eps = 1e-6
         if best.bic < goal_bic + eps:
             best_graph = best
+            reached_goal = True
             break
         
         if best.bic < best_score:
             best_score = best.bic
             best_graph = best
-            count_patience = 0
         else:
             if verbose:
                 print('No improvement for iteration', i)
-            count_patience += 1
-        bic_history.append(best_score)
-        # Check patience
-        if count_patience >= patience:
-            break
 
-    return best_graph, bic_history, population
+        
+
+    return best_graph, population, reached_goal, num_bic_eval
 
 
-def compute_metrics(run_both = False, alg = 'bic'):
+def write_metrics_history(file, individual, goal_bic, ground_truth, data):
+    bic = individual.compute_bic(data) if individual.bic == None else individual.bic
+    f1score, accuracy, precision, recall, SHD, SLF, TLF = individual.compute_accuracy_metrics(ground_truth)
+
+    with open(file, 'a', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow([bic-goal_bic, bic, f1score, accuracy, precision, recall, SHD, SLF, TLF])
+
+def compute_metrics():
     best_score_bic = BIC(best_graph, data)
     best_score_ls = lagrangian(best_graph, data)
-    cross = args.crossover_function
 
     # Hamming distance
-    SLF, TLF = learning_factors(ground_truth, best_graph)
-
-    # Save results
-    print('Saving results')
-
-    if run_both:
-        filename = PATH +f'results_{args.data}_both_{cross}.csv'
-        with open(filename, 'a', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow([args.data, args.sample_size, args.max_iter, args.mutation_rate, 
-                            args.crossover_rate, args.popSize, args.patience, alg, 
-                            args.feasible_only_init_pop, best_score_bic, best_score_ls, SLF, TLF])
-    
-    else:
-        filename = PATH +f'results_{args.data}_{"feasible" if args.feasible_only else "infeasible"}_{cross}.csv'
-    
-        with open(filename, 'a', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow([args.data, args.sample_size, args.max_iter, args.mutation_rate, 
-                            args.crossover_rate, args.popSize, args.patience, args.feasible_only, 
-                            args.feasible_only_init_pop, args.selection_pressure, best_score_bic, best_score_ls, SLF, TLF])
-
-
-    # Save best graph
-    #nx.write_graphml(best_graph, 'best_graph.graphml')
-
+    SLF, TLF = learning_factors(best_graph, ground_truth)
     # Print Results
     print('Best graph:', best_graph.edges())
     print('Best score BIC:', best_score_bic)
@@ -251,63 +238,69 @@ def compute_metrics(run_both = False, alg = 'bic'):
     print('Structure Learning Factor:', SLF)
     print('Topology Learning Factor:', TLF)
 
-    # Draw best graph
-    plt.figure()
-    nx.draw(best_graph, with_labels=True)
-    plt.savefig(PATH + 'best_graph_' + alg + '.png')
+    # Save results
+    print('Saving results')
+
+    filename = PATH +f'GA_all_runs_results_{args.data}.csv'
+
+    with open(filename, 'a', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow([args.data, args.type_exp, goal_bic, args.mutation_rate, 
+                            args.crossover_rate, args.popSize, args.feasible_only, 
+                            args.feasible_only_init_pop, args.selection_pressure, reached_goal, num_bic_eval, end-start, best_score_bic, best_score_ls, SLF, TLF])
 
 if __name__ == '__main__':
 
     # Load arguments
     parser = argparse.ArgumentParser(description='Evolutionary Algorithm for BN structural learning.')
-    parser.add_argument('--sample_size', type=int, help='Number of samples to be used.')
     parser.add_argument('--data', type=str, help='Name of the dataset.')
-    parser.add_argument('--max_iter', type=int, help='Maximum number of iterations.')
     parser.add_argument('--mutation_rate', type=float, help='Probability of mutation.')
     parser.add_argument('--crossover_rate', type=float, help='Probability of crossover.')
     parser.add_argument('--popSize', type=int, help='Population size.')
-    parser.add_argument('--patience', type=int, help='Max number of iterations without improvement.')
     parser.add_argument('--mu', type=float, help='Lagrangian multiplier.')
     parser.add_argument('--selection_pressure', type=float, help='Selection pressure for rank selection.')
     parser.add_argument('--feasible_only', action='store_true')
     parser.add_argument('--no-feasible_only', dest='feasible_only', action='store_false')
     parser.add_argument('--feasible_only_init_pop', action='store_true')
     parser.add_argument('--no-feasible_only_init_pop', dest='feasible_only_init_pop', action='store_false')
-    parser.add_argument('--run_both', action='store_true')
     parser.add_argument('--num_runs', type=int, help='Number of runs', default=1)
+    parser.add_argument('--random', type=int, help='Wether the sample is random or not', default=1)
+    parser.add_argument('--type_exp', type=int, help='Type of experiment (ratio parameters)', default=1)
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--no-verbose', dest='verbose', action='store_false')
-    parser.add_argument('--crossover_function', type=str, help='Crossover function to be used.', default='bnc_pso')
     args = parser.parse_args()
 
-    PATH = define_path_to_save(args.data, args.feasible_only)
-
-
-
-    print("Using crossover function:", args.crossover_function)
+    PATH = '/home/joao/Desktop/UFMG/PhD/code/EA-DAG/results/GA/' + args.data + '/' 
 
     # Parameters
-    max_iter = args.max_iter
     mutation_rate = args.mutation_rate
     crossover_rate = args.crossover_rate
     pop_size = args.popSize
-    patience = args.patience
     feasible_only = args.feasible_only
     mu = args.mu
-    selction_pressure = args.selection_pressure
+    selection_pressure = args.selection_pressure
     n_runs = args.num_runs
 
+    randomized = True if args.random == 1 else False
+    
+    sample_size, max_bic_eval = load_samplesize_num_evals(args.data, args.type_exp)
+    
+    
 
     time_vector = []
     for i in range(n_runs):
+        print(f'Run {i+1}')
+
+        # Create new numbered csv file for each run
+        filename_run = PATH +f'run_{i+1}_results_{args.data}.csv'
 
         # Load data
         if args.data == 'asia':
-            data = load_asia_data(sample_size=args.sample_size)
+            data = load_asia_data(sample_size=sample_size, randomized=randomized)
             ground_truth = load_gt_network_asia()
             print('Asia data and ground truth loaded')
         elif args.data == 'child':
-            data = load_child_data(sample_size=args.sample_size)
+            data = load_child_data(sample_size=sample_size, randomized=randomized)
             ground_truth = load_gt_network_child()
             print('Child data and ground truth loaded')
         else:
@@ -329,8 +322,8 @@ if __name__ == '__main__':
 
         # Evolve population
         print("Evolving population")
-        best_graph, bic_history, population = evolve_DAGs(population, max_iter, mutation_rate, 
-                                                          crossover_rate, patience, selction_pressure, goal_bic, args.crossover_function, feasible_only, verbose=args.verbose)
+        best_graph, population, reached_goal, num_bic_eval = evolve_DAGs(population, max_bic_eval, mutation_rate, 
+                                                          crossover_rate, selection_pressure, goal_bic, filename_run, feasible_only, verbose=args.verbose)
         print("best graph returned BIC")
         print(best_graph.bic)
         print("first ind bic")
@@ -338,14 +331,15 @@ if __name__ == '__main__':
         print("bic of all inds")
         for ind in population:
             print(ind.compute_bic(data))
-        
-        best_graph = best_graph.individual_to_digraph()
-        # Compute metrics
-        compute_metrics(run_both=args.run_both, alg='bic')
 
         print("Algorithm ended. Computing Results")
         end = time.time()
         time_vector.append(end-start)
+        best_graph = best_graph.individual_to_digraph()
 
+        #save best graph
+        nx.write_gml(best_graph, PATH + f'best_graph_{args.data}_run_{i+1}.gml')
+
+        compute_metrics()
 
     print("Mean time:", statistics.mean(time_vector))

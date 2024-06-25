@@ -3,7 +3,57 @@ import numpy as np
 import networkx as nx
 import bnlearn as bn
 
-def load_asia_data(path = '../data/asia10K.csv', sample_size = None):
+def load_samplesize_num_evals(data, type_exp):
+    if type_exp == 1:
+        if data == 'asia':
+            sample_size = 400
+            max_bic_eval = 12000
+        elif data == 'child':
+            sample_size = 500
+            max_bic_eval = 20000
+        elif data == 'insurance':
+            sample_size = 1000
+            max_bic_eval = 60000
+    elif type_exp == 2:
+        if data == 'asia':
+            sample_size = 1000
+            max_bic_eval = 25000
+        elif data == 'child':
+            sample_size = 10000
+            max_bic_eval = 100000
+        elif data == 'insurance':
+            sample_size = 20000
+            max_bic_eval = 140000
+    elif type_exp == 3:
+        if data == 'asia':
+            pass #experiment not defined
+        elif data == 'child':
+            sample_size = 25000
+            max_bic_eval = 120000
+        elif data == 'insurance':
+            sample_size = 50000
+            max_bic_eval = 160000
+
+    return sample_size, max_bic_eval
+
+# **************************************************************************************
+# ******************************* ASIA DATASET *****************************************
+# **************************************************************************************
+
+def load_gt_adj_asia():
+    data = load_asia_data(sample_size=1000)
+    d = data.shape[1]
+    nodes = data.columns
+    node2idx = {node: idx for idx, node in enumerate(nodes)}
+    idx2node = {idx: node for idx, node in enumerate(nodes)}
+    gt_edges = [('A', 'T'), ('T', 'E'), ('E', 'X'), ('S', 'L'), ('L', 'E'), ('E', 'X'), ('S', 'B'), ('B', 'D')]
+    gt_adj = np.zeros((d, d))
+    for edge in gt_edges:
+        gt_adj[node2idx[edge[0]], node2idx[edge[1]]] = 1
+
+    return gt_adj, node2idx, idx2node
+
+def load_asia_data(path = '../data/asia10K.csv', sample_size = None, randomized=False):
     '''
     Loads the Asia dataset.
     
@@ -31,10 +81,80 @@ def load_asia_data(path = '../data/asia10K.csv', sample_size = None):
     }, inplace=True)
 
     if sample_size is not None:
-        #data = data.head(sample_size)
-        data = data.sample(sample_size)
+        if randomized:
+            data = data.sample(sample_size)
+        else:
+            data = data.head(sample_size)
 
     return data
+
+def load_gt_network_asia():
+    '''
+    Loads the ground truth graph for the Asia dataset.
+    
+    Returns:
+    --------
+    networkx.DiGraph
+        The ground truth graph.
+    '''
+
+    # Create ground truth graph
+    gt = nx.DiGraph()
+    gt.add_edges_from([['S', 'L'],
+                    ['S', 'B'],
+                    ['L', 'E'],
+                    ['B', 'D'],
+                    ['E', 'X'],
+                    ['E', 'D'],
+                    ['A', 'T'],
+                    ['T', 'E']])
+    return gt
+
+# **************************************************************************************
+# ******************************* CHILD DATASET ****************************************
+# **************************************************************************************
+
+def load_child_data(path='../data/child.csv', sample_size=None, randomized=False):
+    '''
+    Loads and processes the child data.
+    
+    Parameters:
+    -----------
+    path : str, optional
+        Path to the child data file.
+
+    Returns:
+    --------
+    pandas.DataFrame
+        The processed dataset.
+    '''
+    # Load the data
+    data = pd.read_csv(path)
+    if sample_size is not None:
+        if randomized:
+            data = data.sample(sample_size)
+        else:
+            data = data.head(sample_size)
+
+    return data
+
+def load_gt_network_child(path='../data/child.gml'):
+    G = nx.read_gml(path)
+    return G
+
+
+# **************************************************************************************
+# ******************************* INSURANCE DATASET ************************************
+# **************************************************************************************
+
+
+
+
+
+
+
+
+
 
 
 def load_alarm_data(path = '../data/alarm10K.csv'):
@@ -218,66 +338,8 @@ def load_gt_adult():
     return gt
 
 
-def load_gt_network_asia():
-    '''
-    Loads the ground truth graph for the Asia dataset.
-    
-    Returns:
-    --------
-    networkx.DiGraph
-        The ground truth graph.
-    '''
-
-    # Create ground truth graph
-    gt = nx.DiGraph()
-    gt.add_edges_from([['S', 'L'],
-                    ['S', 'B'],
-                    ['L', 'E'],
-                    ['B', 'D'],
-                    ['E', 'X'],
-                    ['E', 'D'],
-                    ['A', 'T'],
-                    ['T', 'E']])
-    return gt
-
-def load_gt_adj_asia():
-    data = load_asia_data(sample_size=1000)
-    d = data.shape[1]
-    nodes = data.columns
-    node2idx = {node: idx for idx, node in enumerate(nodes)}
-    idx2node = {idx: node for idx, node in enumerate(nodes)}
-    gt_edges = [('A', 'T'), ('T', 'E'), ('E', 'X'), ('S', 'L'), ('L', 'E'), ('E', 'X'), ('S', 'B'), ('B', 'D')]
-    gt_adj = np.zeros((d, d))
-    for edge in gt_edges:
-        gt_adj[node2idx[edge[0]], node2idx[edge[1]]] = 1
-
-    return gt_adj, node2idx, idx2node
 
 
-def load_child_data(path='../data/child.csv', sample_size=None):
-    '''
-    Loads and processes the child data.
-    
-    Parameters:
-    -----------
-    path : str, optional
-        Path to the child data file.
-
-    Returns:
-    --------
-    pandas.DataFrame
-        The processed dataset.
-    '''
-    # Load the data
-    data = pd.read_csv(path)
-    if sample_size is not None:
-        data = data.sample(sample_size)
-
-    return data
-
-def load_gt_network_child(path='../data/child.gml'):
-    G = nx.read_gml(path)
-    return G
 
 
 if __name__ == '__main__':
