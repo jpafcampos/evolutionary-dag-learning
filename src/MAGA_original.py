@@ -159,8 +159,8 @@ if __name__ == '__main__':
     parser.add_argument('--no-verbose', dest='verbose', action='store_false')
     args = parser.parse_args()
 
-    #PATH = define_path_to_save(args.data, args.feasible_only)
-    PATH = '/home/joao/Desktop/UFMG/PhD/code/EA-DAG/results/MAGA/' + args.data + '/' 
+    #PATH = '/home/joao/Desktop/UFMG/PhD/code/EA-DAG/results/GA/' + args.data + '/' 
+    PATH = '/home/joaocampos/phd_code/evolutionary-dag-learning/results/GA/' + args.data + '/'
 
     # Parameters
     Pm_min = args.Pm_min

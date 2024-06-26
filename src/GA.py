@@ -270,8 +270,8 @@ if __name__ == '__main__':
     parser.add_argument('--no-verbose', dest='verbose', action='store_false')
     args = parser.parse_args()
 
-    PATH = '/home/joao/Desktop/UFMG/PhD/code/EA-DAG/results/GA/' + args.data + '/' 
-
+    #PATH = '/home/joao/Desktop/UFMG/PhD/code/EA-DAG/results/GA/' + args.data + '/' 
+    PATH = '/home/joaocampos/phd_code/evolutionary-dag-learning/results/GA/' + args.data + '/'
     # Parameters
     mutation_rate = args.mutation_rate
     crossover_rate = args.crossover_rate

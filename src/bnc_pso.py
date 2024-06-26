@@ -156,7 +156,8 @@ if __name__ == '__main__':
     parser.add_argument('--crossover_function', type=str, help='Crossover function to be used.', default='bnc_pso')
     args = parser.parse_args()
 
-    PATH = '/home/joao/Desktop/UFMG/PhD/code/EA-DAG/results/BNCPSO/' + args.data + '/' 
+    #PATH = '/home/joao/Desktop/UFMG/PhD/code/EA-DAG/results/GA/' + args.data + '/' 
+    PATH = '/home/joaocampos/phd_code/evolutionary-dag-learning/results/GA/' + args.data + '/'
 
 
 
