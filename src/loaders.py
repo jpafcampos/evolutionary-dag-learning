@@ -147,6 +147,33 @@ def load_gt_network_child(path='../data/child.gml'):
 # ******************************* INSURANCE DATASET ************************************
 # **************************************************************************************
 
+def load_insurance_data(path='../data/insurance_adapted.csv', sample_size=None, randomized=False):
+    '''
+    Loads and processes the insurance data.
+    
+    Parameters:
+    -----------
+    path : str, optional
+        Path to the insurance data file.
+
+    Returns:
+    --------
+    pandas.DataFrame
+        The processed dataset.
+    '''
+    # Load the data
+    data = pd.read_csv(path)
+    if sample_size is not None:
+        if randomized:
+            data = data.sample(sample_size)
+        else:
+            data = data.head(sample_size)
+
+    return data
+
+def load_gt_network_insurance(path = '../data/insurance.gml'):
+    G = nx.read_gml(path)
+    return G
 
 
 

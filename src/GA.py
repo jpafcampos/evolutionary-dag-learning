@@ -303,10 +303,14 @@ if __name__ == '__main__':
             data = load_child_data(sample_size=sample_size, randomized=randomized)
             ground_truth = load_gt_network_child()
             print('Child data and ground truth loaded')
+        elif args.data == 'insurance':
+            data = load_insurance_data(sample_size=sample_size, randomized=randomized)
+            ground_truth = load_gt_network_insurance()
+            print('Insurance data and ground truth loaded')
         else:
-            # dataset not available
-            print('Dataset not available.')
-            exit(1)
+            print('Data not recognized')
+            break
+
 
         goal_bic = BIC(ground_truth, data)
         print('Goal BIC:', goal_bic)

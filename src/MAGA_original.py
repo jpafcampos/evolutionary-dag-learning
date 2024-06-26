@@ -184,6 +184,7 @@ if __name__ == '__main__':
     time_vector = []
     for i in range(n_runs):
         print(f'Run {i+1}/{n_runs}')
+        
         # Load data
         if args.data == 'asia':
             data = load_asia_data(sample_size=sample_size, randomized=randomized)
@@ -193,10 +194,13 @@ if __name__ == '__main__':
             data = load_child_data(sample_size=sample_size, randomized=randomized)
             ground_truth = load_gt_network_child()
             print('Child data and ground truth loaded')
+        elif args.data == 'insurance':
+            data = load_insurance_data(sample_size=sample_size, randomized=randomized)
+            ground_truth = load_gt_network_insurance()
+            print('Insurance data and ground truth loaded')
         else:
-            # dataset not available
-            print('Dataset not available.')
-            exit(1)
+            print('Data not recognized')
+            break
 
         goal_bic = BIC(ground_truth, data)
         print('Goal BIC:', goal_bic)

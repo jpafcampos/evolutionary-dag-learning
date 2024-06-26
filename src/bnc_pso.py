@@ -25,7 +25,7 @@ import matplotlib.pyplot as plt
 import argparse
 import copy
 
-def BNC_PSO(particles, goalscore, data, evaluations, w_start, w_end, c1_start, c1_end, c2_start, c2_end, max_iter, feasible_only=True):
+def BNC_PSO(particles, goalscore, data, evaluations, w_start, w_end, c1_start, c1_end, c2_start, c2_end, max_bic_eval, feasible_only=True):
     
     best_score = particles[0].bic if particles[0].bic != None else particles[0].compute_bic(data)
     media_score = 0
@@ -98,41 +98,22 @@ def BNC_PSO(particles, goalscore, data, evaluations, w_start, w_end, c1_start, c
         medias.append(media_score/len(particles))
         ev += 1
         iter += 1
-    return best_particle, best_score, ev, bests, medias
+    return best_particle, particles, num_bic_eval, reached_goal
 
+def write_metrics_history(file, individual, goal_bic, ground_truth, data):
+    bic = individual.compute_bic(data) if individual.bic == None else individual.bic
+    f1score, accuracy, precision, recall, SHD, SLF, TLF = individual.compute_accuracy_metrics(ground_truth)
 
-def compute_metrics(run_both = False, alg = 'bic'):
+    with open(file, 'a', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow([bic-goal_bic, bic, f1score, accuracy, precision, recall, SHD, SLF, TLF])
+
+def compute_metrics():
     best_score_bic = BIC(best_graph, data)
     best_score_ls = lagrangian(best_graph, data)
-    cross = args.crossover_function
 
     # Hamming distance
-    SLF, TLF = learning_factors(ground_truth, best_graph)
-
-    # Save results
-    print('Saving results')
-
-    if run_both:
-        filename = PATH +f'results_{args.data}_both_{cross}.csv'
-        with open(filename, 'a', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow([args.data, args.sample_size, args.max_iter, args.mutation_rate, 
-                            args.crossover_rate, args.popSize, args.patience, alg, 
-                            args.feasible_only_init_pop, best_score_bic, best_score_ls, SLF, TLF])
-    
-    else:
-        filename = PATH +f'results_{args.data}_{"feasible" if args.feasible_only else "infeasible"}_{cross}.csv'
-    
-        with open(filename, 'a', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow([args.data, args.sample_size, args.max_iter, args.mutation_rate, 
-                            args.crossover_rate, args.popSize, args.patience, args.feasible_only, 
-                            args.feasible_only_init_pop, args.selection_pressure, best_score_bic, best_score_ls, SLF, TLF])
-
-
-    # Save best graph
-    #nx.write_graphml(best_graph, 'best_graph.graphml')
-
+    SLF, TLF = learning_factors(best_graph, ground_truth)
     # Print Results
     print('Best graph:', best_graph.edges())
     print('Best score BIC:', best_score_bic)
@@ -140,30 +121,36 @@ def compute_metrics(run_both = False, alg = 'bic'):
     print('Structure Learning Factor:', SLF)
     print('Topology Learning Factor:', TLF)
 
-    # Draw best graph
-    plt.figure()
-    nx.draw(best_graph, with_labels=True)
-    plt.savefig(PATH + 'best_graph_' + alg + '.png')
+    # Save results
+    print('Saving results')
+
+    filename = PATH +f'GA_all_runs_results_{args.data}.csv'
+
+    with open(filename, 'a', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow([args.data, args.type_exp, goal_bic, args.mutation_rate, 
+                            args.crossover_rate, args.popSize, args.feasible_only, 
+                            args.feasible_only_init_pop, reached_goal, num_bic_eval, end-start, best_score_bic, best_score_ls, SLF, TLF])
+
 
 if __name__ == '__main__':
 
     # Load arguments
     parser = argparse.ArgumentParser(description='Evolutionary Algorithm for BN structural learning.')
-    parser.add_argument('--sample_size', type=int, help='Number of samples to be used.')
     parser.add_argument('--data', type=str, help='Name of the dataset.')
-    parser.add_argument('--max_iter', type=int, help='Maximum number of iterations.')
     parser.add_argument('--mutation_rate', type=float, help='Probability of mutation.')
     parser.add_argument('--crossover_rate', type=float, help='Probability of crossover.')
     parser.add_argument('--popSize', type=int, help='Population size.')
     parser.add_argument('--patience', type=int, help='Max number of iterations without improvement.')
     parser.add_argument('--mu', type=float, help='Lagrangian multiplier.')
-    parser.add_argument('--selection_pressure', type=float, help='Selection pressure for rank selection.')
     parser.add_argument('--feasible_only', action='store_true')
     parser.add_argument('--no-feasible_only', dest='feasible_only', action='store_false')
     parser.add_argument('--feasible_only_init_pop', action='store_true')
     parser.add_argument('--no-feasible_only_init_pop', dest='feasible_only_init_pop', action='store_false')
     parser.add_argument('--run_both', action='store_true')
     parser.add_argument('--num_runs', type=int, help='Number of runs', default=1)
+    parser.add_argument('--random', type=int, help='Wether the sample is random or not', default=1)
+    parser.add_argument('--type_exp', type=int, help='Type of experiment (ratio parameters)', default=1)
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--no-verbose', dest='verbose', action='store_false')
     parser.add_argument('--crossover_function', type=str, help='Crossover function to be used.', default='bnc_pso')
@@ -176,33 +163,37 @@ if __name__ == '__main__':
     print("Using crossover function:", args.crossover_function)
 
     # Parameters
-    max_iter = args.max_iter
     mutation_rate = args.mutation_rate
     crossover_rate = args.crossover_rate
     pop_size = args.popSize
     patience = args.patience
     feasible_only = args.feasible_only
     mu = args.mu
-    selction_pressure = args.selection_pressure
     n_runs = args.num_runs
 
+    randomized = True if args.random == 1 else False
+    
+    sample_size, max_bic_eval = load_samplesize_num_evals(args.data, args.type_exp)
 
     time_vector = []
     for i in range(n_runs):
 
         # Load data
         if args.data == 'asia':
-            data = load_asia_data(sample_size=args.sample_size)
+            data = load_asia_data(sample_size=sample_size, randomized=randomized)
             ground_truth = load_gt_network_asia()
             print('Asia data and ground truth loaded')
         elif args.data == 'child':
-            data = load_child_data(sample_size=args.sample_size)
+            data = load_child_data(sample_size=sample_size, randomized=randomized)
             ground_truth = load_gt_network_child()
             print('Child data and ground truth loaded')
+        elif args.data == 'insurance':
+            data = load_insurance_data(sample_size=sample_size, randomized=randomized)
+            ground_truth = load_gt_network_insurance()
+            print('Insurance data and ground truth loaded')
         else:
-            # dataset not available
-            print('Dataset not available.')
-            exit(1)
+            print('Data not recognized')
+            break
 
         goal_bic = BIC(ground_truth, data)
         print('Goal BIC:', goal_bic)
@@ -229,7 +220,7 @@ if __name__ == '__main__':
         max_iter = 200
 
         #def BNC_PSO(particles, goalscore, data, evaluations, w_start, w_end, c1_start, c1_end, c2_start, c2_end, max_iter, feasible_only=True):
-        best_graph, best_score, ev, bests, medias = BNC_PSO(population, goal_bic, data, evaluations, w_start, w_end, c1_start, c1_end, c2_start, c2_end, max_iter, feasible_only=feasible_only)
+        best_particle, particles, num_bic_eval, reached_goal = BNC_PSO(population, goal_bic, data, evaluations, w_start, w_end, c1_start, c1_end, c2_start, c2_end, max_bic_eval, feasible_only=feasible_only)
         print("best graph returned BIC")
         print(best_graph.bic)
 
