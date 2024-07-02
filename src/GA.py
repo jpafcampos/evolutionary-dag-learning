@@ -270,8 +270,8 @@ if __name__ == '__main__':
     parser.add_argument('--no-verbose', dest='verbose', action='store_false')
     args = parser.parse_args()
 
-    #PATH = '/home/joao/Desktop/UFMG/PhD/code/EA-DAG/results/GA/' + args.data + '/' 
-    PATH = '/home/joaocampos/phd_code/evolutionary-dag-learning/results/GA/' + args.data + '/'
+    PATH = '/home/joao/Desktop/UFMG/PhD/code/EA-DAG/results/GA/' + args.data + '/' 
+    #PATH = '/home/joaocampos/phd_code/evolutionary-dag-learning/results/GA/' + args.data + '/'
     # Parameters
     mutation_rate = args.mutation_rate
     crossover_rate = args.crossover_rate
@@ -293,6 +293,9 @@ if __name__ == '__main__':
 
         # Create new numbered csv file for each run
         filename_run = PATH +f'run_{i+1}_results_{args.data}.csv'
+        with open(filename_run, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(['BIC - Goal', 'BIC', 'F1 Score', 'Accuracy', 'Precision', 'Recall', 'SHD', 'SLF', 'TLF'])
 
         # Load data
         if args.data == 'asia':
@@ -315,8 +318,6 @@ if __name__ == '__main__':
         goal_bic = BIC(ground_truth, data)
         print('Goal BIC:', goal_bic)
 
-        # measure time
-        start = time.time()
 
         # Create initial population
         nodes = data.columns
@@ -325,6 +326,8 @@ if __name__ == '__main__':
         population = create_population(pop_size, nodes, data, feasible_only=args.feasible_only_init_pop)
 
         # Evolve population
+        # measure time
+        start = time.time()
         print("Evolving population")
         best_graph, population, reached_goal, num_bic_eval = evolve_DAGs(population, max_bic_eval, mutation_rate, 
                                                           crossover_rate, selection_pressure, goal_bic, filename_run, feasible_only, verbose=args.verbose)

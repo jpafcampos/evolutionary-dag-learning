@@ -156,8 +156,8 @@ if __name__ == '__main__':
     parser.add_argument('--crossover_function', type=str, help='Crossover function to be used.', default='bnc_pso')
     args = parser.parse_args()
 
-    #PATH = '/home/joao/Desktop/UFMG/PhD/code/EA-DAG/results/GA/' + args.data + '/' 
-    PATH = '/home/joaocampos/phd_code/evolutionary-dag-learning/results/GA/' + args.data + '/'
+    #PATH = '/home/joao/Desktop/UFMG/PhD/code/EA-DAG/results/BNCPSO/' + args.data + '/' 
+    PATH = '/home/joaocampos/phd_code/evolutionary-dag-learning/results/BNCPSO/' + args.data + '/'
 
 
 
@@ -178,6 +178,12 @@ if __name__ == '__main__':
 
     time_vector = []
     for i in range(n_runs):
+
+        # Create new numbered csv file for each run
+        filename_run = PATH +f'run_{i+1}_results_{args.data}.csv'
+        with open(filename_run, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(['BIC - Goal', 'BIC', 'F1 Score', 'Accuracy', 'Precision', 'Recall', 'SHD', 'SLF', 'TLF'])
 
         # Load data
         if args.data == 'asia':

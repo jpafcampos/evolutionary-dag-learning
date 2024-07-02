@@ -477,6 +477,7 @@ def self_learning(sL_size, best_graph, mutation_prob, keep_mutation_prob, max_it
     sBest = copy.deepcopy(best_graph)
     sBest_score = sBest.bic
     sAgents = s_create_agents(sL_size, sBest, data, feasible_only)
+    num_eval_bic += sL_size * sL_size
     
     for _ in range(max_iter):
         for agent_idx in range(len(sAgents)):

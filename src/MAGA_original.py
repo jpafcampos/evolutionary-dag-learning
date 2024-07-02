@@ -159,8 +159,8 @@ if __name__ == '__main__':
     parser.add_argument('--no-verbose', dest='verbose', action='store_false')
     args = parser.parse_args()
 
-    #PATH = '/home/joao/Desktop/UFMG/PhD/code/EA-DAG/results/GA/' + args.data + '/' 
-    PATH = '/home/joaocampos/phd_code/evolutionary-dag-learning/results/GA/' + args.data + '/'
+    #PATH = '/home/joao/Desktop/UFMG/PhD/code/EA-DAG/results/MAGA/' + args.data + '/' 
+    PATH = '/home/joaocampos/phd_code/evolutionary-dag-learning/results/MAGA/' + args.data + '/'
 
     # Parameters
     Pm_min = args.Pm_min
@@ -207,9 +207,10 @@ if __name__ == '__main__':
 
         # Create file to save results
         file = PATH +f'run_{i+1}_results_{args.data}.csv'
+        with open(file, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(['BIC - Goal', 'BIC', 'F1 Score', 'Accuracy', 'Precision', 'Recall', 'SHD', 'SLF', 'TLF'])
 
-        # measure time
-        start = time.time()
 
         # Create initial population
         nodes = data.columns
@@ -217,6 +218,8 @@ if __name__ == '__main__':
         print("Creating initial population")
         population = create_MAGA_population(L_size, nodes, data, feasible_only=args.feasible_only_init_pop)
 
+        # measure time
+        start = time.time()
         # Evolve population
         print("Evolving population")
         #def MAGA(population, max_iter, Pm_min, Pm_max, Po, Pc_min, Pc_max, t_max, goal_bic, sL, sPm, sGen, feasible_only, verbose=False):
