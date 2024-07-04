@@ -23,6 +23,7 @@ from loaders import *
 import matplotlib.pyplot as plt
 import argparse
 import copy
+import os
 
 
 def select_best(population, n, data):
@@ -199,8 +200,7 @@ def evolve_DAGs (population, max_bic_eval, mutation_rate, crossover_rate, select
         write_metrics_history(file, best, goal_bic, ground_truth, data)
 
         # Check if goal is reached
-        eps = 1e-6
-        if best.bic < goal_bic + eps:
+        if best.bic <= goal_bic + 0.00000001:
             best_graph = best
             reached_goal = True
             break
@@ -270,8 +270,12 @@ if __name__ == '__main__':
     parser.add_argument('--no-verbose', dest='verbose', action='store_false')
     args = parser.parse_args()
 
-    #PATH = '/home/joao/Desktop/UFMG/PhD/code/EA-DAG/results/GA/' + args.data + '/' 
-    PATH = '/home/joaocampos/phd_code/evolutionary-dag-learning/results/GA/' + args.data + '/'
+    PATH = '/home/joao/Desktop/UFMG/PhD/code/EA-DAG/results/MAGA/' + args.data + '/'
+    # if PATH does not exist, change it to the path in the server
+    if not os.path.exists(PATH):
+        PATH = '/home/joaocampos/phd_code/evolutionary-dag-learning/results/MAGA/' + args.data + '/'
+    if not os.path.exists(PATH):
+        PATH = '/home/bessani/phd_code/evolutionary-dag-learning/results/MAGA/' + args.data + '/'
     # Parameters
     mutation_rate = args.mutation_rate
     crossover_rate = args.crossover_rate

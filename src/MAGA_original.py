@@ -23,7 +23,7 @@ from loaders import *
 import matplotlib.pyplot as plt
 import argparse
 import copy
-
+import os
 
 
 def MAGA(population, max_eval_bic, Pm_min, Pm_max, Po, Pc_min, Pc_max, t_max, goal_bic, sL, sPm, sGen, file, self_learn, feasible_only, verbose=False):
@@ -91,7 +91,7 @@ def MAGA(population, max_eval_bic, Pm_min, Pm_max, Po, Pc_min, Pc_max, t_max, go
 
         write_metrics_history(file, best_graph, goal_bic, ground_truth, data)
         iteration += 1
-        t += 1
+
 
 
     if best_bic <= goal_bic + 0.00000001:
@@ -158,9 +158,13 @@ if __name__ == '__main__':
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--no-verbose', dest='verbose', action='store_false')
     args = parser.parse_args()
-
-    #PATH = '/home/joao/Desktop/UFMG/PhD/code/EA-DAG/results/MAGA/' + args.data + '/' 
-    PATH = '/home/joaocampos/phd_code/evolutionary-dag-learning/results/MAGA/' + args.data + '/'
+    
+    PATH = '/home/joao/Desktop/UFMG/PhD/code/EA-DAG/results/MAGA/' + args.data + '/'
+    # if PATH does not exist, change it to the path in the server
+    if not os.path.exists(PATH):
+        PATH = '/home/joaocampos/phd_code/evolutionary-dag-learning/results/MAGA/' + args.data + '/'
+    if not os.path.exists(PATH):
+        PATH = '/home/bessani/phd_code/evolutionary-dag-learning/results/MAGA/' + args.data + '/'
 
     # Parameters
     Pm_min = args.Pm_min

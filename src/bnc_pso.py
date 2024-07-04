@@ -24,6 +24,7 @@ from loaders import *
 import matplotlib.pyplot as plt
 import argparse
 import copy
+import os
 
 def BNC_PSO(particles, goalscore, data, evaluations, w_start, w_end, c1_start, c1_end, c2_start, c2_end, max_bic_eval, feasible_only=True):
     
@@ -156,10 +157,12 @@ if __name__ == '__main__':
     parser.add_argument('--crossover_function', type=str, help='Crossover function to be used.', default='bnc_pso')
     args = parser.parse_args()
 
-    #PATH = '/home/joao/Desktop/UFMG/PhD/code/EA-DAG/results/BNCPSO/' + args.data + '/' 
-    PATH = '/home/joaocampos/phd_code/evolutionary-dag-learning/results/BNCPSO/' + args.data + '/'
-
-
+    PATH = '/home/joao/Desktop/UFMG/PhD/code/EA-DAG/results/MAGA/' + args.data + '/'
+    # if PATH does not exist, change it to the path in the server
+    if not os.path.exists(PATH):
+        PATH = '/home/joaocampos/phd_code/evolutionary-dag-learning/results/MAGA/' + args.data + '/'
+    if not os.path.exists(PATH):
+        PATH = '/home/bessani/phd_code/evolutionary-dag-learning/results/MAGA/' + args.data + '/'
 
     print("Using crossover function:", args.crossover_function)
 
