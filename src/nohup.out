@@ -1,0 +1,163 @@
+Run 1/20
+Child data and ground truth loaded
+Goal BIC: 122868.22327782099
+Traceback (most recent call last):
+  File "MAGA_original.py", line 214, in <module>
+    with open(file, 'w', newline='') as f:
+FileNotFoundError: [Errno 2] No such file or directory: '/home/bessani/phd_code/evolutionary-dag-learning/results/MAGA/child/run_1_results_child.csv'
+Run 1/20
+Child data and ground truth loaded
+Goal BIC: 122868.22327782099
+Creating initial population
+Evolving population
+best graph returned BIC
+122911.74833883722
+Algorithm ended. Computing Results
+Best graph: [('DuctFlow', 'HypDistrib'), ('HypDistrib', 'LowerBodyO2'), ('CardiacMixing', 'HypDistrib'), ('CardiacMixing', 'HypoxiaInO2'), ('HypoxiaInO2', 'LowerBodyO2'), ('HypoxiaInO2', 'RUQO2'), ('LungParench', 'HypoxiaInO2'), ('LungParench', 'CO2'), ('LungParench', 'ChestXray'), ('LungParench', 'Grunting'), ('CO2', 'CO2Report'), ('ChestXray', 'XrayReport'), ('LungFlow', 'ChestXray'), ('LungFlow', 'Disease'), ('Grunting', 'GruntingReport'), ('Sick', 'Grunting'), ('Sick', 'Age'), ('LVHreport', 'LVH'), ('Disease', 'DuctFlow'), ('Disease', 'CardiacMixing'), ('Disease', 'LungParench'), ('Disease', 'Sick'), ('Disease', 'LVH'), ('Disease', 'LVHreport'), ('Disease', 'BirthAsphyxia'), ('Disease', 'Age')]
+Best score BIC: 122911.74833883722
+Best score LS: 28.916500000000003
+Structure Learning Factor: 0.88
+Topology Learning Factor: 1.0
+Saving results
+Run 2/20
+Child data and ground truth loaded
+Goal BIC: 122868.22327782099
+Creating initial population
+Evolving population
+best graph returned BIC
+123137.6665792933
+Algorithm ended. Computing Results
+Best graph: [('DuctFlow', 'HypDistrib'), ('HypDistrib', 'LowerBodyO2'), ('CardiacMixing', 'HypDistrib'), ('HypoxiaInO2', 'CardiacMixing'), ('HypoxiaInO2', 'LowerBodyO2'), ('HypoxiaInO2', 'RUQO2'), ('LungParench', 'HypoxiaInO2'), ('LungParench', 'CO2'), ('LungParench', 'ChestXray'), ('LungParench', 'Grunting'), ('CO2', 'CO2Report'), ('ChestXray', 'XrayReport'), ('LungFlow', 'ChestXray'), ('Grunting', 'GruntingReport'), ('Sick', 'Grunting'), ('LVH', 'LVHreport'), ('Disease', 'DuctFlow'), ('Disease', 'CardiacMixing'), ('Disease', 'HypoxiaInO2'), ('Disease', 'LungParench'), ('Disease', 'LungFlow'), ('Disease', 'Sick'), ('Disease', 'LVH'), ('Disease', 'BirthAsphyxia'), ('Age', 'Sick'), ('Age', 'Disease')]
+Best score BIC: 123137.6665792933
+Best score LS: 27.300150000000002
+Structure Learning Factor: 0.84
+Topology Learning Factor: 1.0
+Saving results
+Run 3/20
+Child data and ground truth loaded
+Goal BIC: 122868.22327782099
+Creating initial population
+Evolving population
+best graph returned BIC
+123634.44343842704
+Algorithm ended. Computing Results
+Best graph: [('DuctFlow', 'HypDistrib'), ('HypDistrib', 'LowerBodyO2'), ('CardiacMixing', 'HypDistrib'), ('CardiacMixing', 'HypoxiaInO2'), ('HypoxiaInO2', 'LowerBodyO2'), ('HypoxiaInO2', 'RUQO2'), ('LungParench', 'HypoxiaInO2'), ('LungParench', 'CO2'), ('LungParench', 'Grunting'), ('CO2', 'CO2Report'), ('ChestXray', 'LungParench'), ('ChestXray', 'LungFlow'), ('ChestXray', 'Disease'), ('LungFlow', 'LungParench'), ('Grunting', 'GruntingReport'), ('Sick', 'Grunting'), ('LVH', 'LVHreport'), ('XrayReport', 'ChestXray'), ('Disease', 'DuctFlow'), ('Disease', 'CardiacMixing'), ('Disease', 'LungFlow'), ('Disease', 'Sick'), ('Disease', 'LVH'), ('Disease', 'BirthAsphyxia'), ('Disease', 'Age'), ('Age', 'Sick')]
+Best score BIC: 123634.44343842704
+Best score LS: 32.955600000000004
+Structure Learning Factor: 0.76
+Topology Learning Factor: 0.96
+Saving results
+Run 4/20
+Child data and ground truth loaded
+Goal BIC: 122868.22327782099
+Creating initial population
+Evolving population
+best graph returned BIC
+123163.84521271334
+Algorithm ended. Computing Results
+Best graph: [('DuctFlow', 'HypDistrib'), ('HypDistrib', 'LowerBodyO2'), ('CardiacMixing', 'HypDistrib'), ('HypoxiaInO2', 'CardiacMixing'), ('HypoxiaInO2', 'LowerBodyO2'), ('HypoxiaInO2', 'RUQO2'), ('LungParench', 'HypoxiaInO2'), ('LungParench', 'CO2'), ('LungParench', 'ChestXray'), ('LungParench', 'Grunting'), ('LungParench', 'CO2Report'), ('ChestXray', 'XrayReport'), ('LungFlow', 'ChestXray'), ('Grunting', 'GruntingReport'), ('Sick', 'Grunting'), ('LVH', 'LVHreport'), ('LVH', 'Disease'), ('CO2Report', 'CO2'), ('Disease', 'DuctFlow'), ('Disease', 'CardiacMixing'), ('Disease', 'HypoxiaInO2'), ('Disease', 'LungParench'), ('Disease', 'LungFlow'), ('Disease', 'Sick'), ('Disease', 'BirthAsphyxia'), ('Disease', 'Age'), ('Age', 'Sick')]
+Best score BIC: 123163.84521271334
+Best score LS: 27.367600000000003
+Structure Learning Factor: 0.8
+Topology Learning Factor: 1.0
+Saving results
+Run 5/20
+Child data and ground truth loaded
+Goal BIC: 122868.22327782099
+Creating initial population
+Evolving population
+best graph returned BIC
+122868.22327782099
+Algorithm ended. Computing Results
+Best graph: [('DuctFlow', 'HypDistrib'), ('HypDistrib', 'LowerBodyO2'), ('CardiacMixing', 'HypDistrib'), ('CardiacMixing', 'HypoxiaInO2'), ('HypoxiaInO2', 'LowerBodyO2'), ('HypoxiaInO2', 'RUQO2'), ('LungParench', 'HypoxiaInO2'), ('LungParench', 'CO2'), ('LungParench', 'ChestXray'), ('LungParench', 'Grunting'), ('LungParench', 'Disease'), ('CO2', 'CO2Report'), ('ChestXray', 'XrayReport'), ('LungFlow', 'ChestXray'), ('Grunting', 'GruntingReport'), ('Sick', 'Grunting'), ('LVH', 'LVHreport'), ('Disease', 'DuctFlow'), ('Disease', 'CardiacMixing'), ('Disease', 'LungFlow'), ('Disease', 'Sick'), ('Disease', 'LVH'), ('Disease', 'BirthAsphyxia'), ('Disease', 'Age'), ('Age', 'Sick')]
+Best score BIC: 122868.22327782099
+Best score LS: 25.4078
+Structure Learning Factor: 0.88
+Topology Learning Factor: 1.0
+Saving results
+Run 6/20
+Child data and ground truth loaded
+Goal BIC: 122868.22327782099
+Creating initial population
+Evolving population
+best graph returned BIC
+122910.34096517133
+Algorithm ended. Computing Results
+Best graph: [('DuctFlow', 'HypDistrib'), ('HypDistrib', 'LowerBodyO2'), ('CardiacMixing', 'HypDistrib'), ('CardiacMixing', 'HypoxiaInO2'), ('HypoxiaInO2', 'LowerBodyO2'), ('HypoxiaInO2', 'RUQO2'), ('LungParench', 'HypoxiaInO2'), ('LungParench', 'CO2'), ('LungParench', 'ChestXray'), ('LungParench', 'Grunting'), ('LungParench', 'GruntingReport'), ('CO2', 'CO2Report'), ('ChestXray', 'XrayReport'), ('LungFlow', 'ChestXray'), ('Sick', 'Grunting'), ('Sick', 'GruntingReport'), ('LVH', 'LVHreport'), ('LVH', 'Disease'), ('Disease', 'DuctFlow'), ('Disease', 'CardiacMixing'), ('Disease', 'LungParench'), ('Disease', 'LungFlow'), ('Disease', 'Sick'), ('Disease', 'BirthAsphyxia'), ('Disease', 'Age'), ('GruntingReport', 'Grunting'), ('Age', 'Sick')]
+Best score BIC: 122910.34096517133
+Best score LS: 26.38475
+Structure Learning Factor: 0.84
+Topology Learning Factor: 1.0
+Saving results
+Run 7/20
+Child data and ground truth loaded
+Goal BIC: 122868.22327782099
+Creating initial population
+Evolving population
+best graph returned BIC
+123354.24193453167
+Algorithm ended. Computing Results
+Best graph: [('DuctFlow', 'HypDistrib'), ('HypDistrib', 'LowerBodyO2'), ('CardiacMixing', 'HypDistrib'), ('CardiacMixing', 'HypoxiaInO2'), ('HypoxiaInO2', 'LowerBodyO2'), ('HypoxiaInO2', 'RUQO2'), ('LungParench', 'HypoxiaInO2'), ('LungParench', 'Grunting'), ('LungParench', 'Disease'), ('CO2', 'ChestXray'), ('CO2', 'CO2Report'), ('ChestXray', 'LungParench'), ('ChestXray', 'XrayReport'), ('LungFlow', 'LungParench'), ('LungFlow', 'ChestXray'), ('LungFlow', 'Disease'), ('Grunting', 'GruntingReport'), ('Sick', 'Grunting'), ('LVHreport', 'LVH'), ('CO2Report', 'LungParench'), ('CO2Report', 'LungFlow'), ('Disease', 'DuctFlow'), ('Disease', 'CardiacMixing'), ('Disease', 'Sick'), ('Disease', 'LVH'), ('Disease', 'LVHreport'), ('Disease', 'BirthAsphyxia'), ('Disease', 'Age'), ('Age', 'Sick')]
+Best score BIC: 123354.24193453167
+Best score LS: 30.6246
+Structure Learning Factor: 0.72
+Topology Learning Factor: 0.96
+Saving results
+Run 8/20
+Child data and ground truth loaded
+Goal BIC: 122868.22327782099
+Creating initial population
+Evolving population
+Traceback (most recent call last):
+  File "/home/joao/anaconda3/envs/env-bnlearn/lib/python3.8/site-packages/pandas/core/generic.py", line 5914, in __setattr__
+    object.__getattribute__(self, name)
+  File "/home/joao/anaconda3/envs/env-bnlearn/lib/python3.8/site-packages/pandas/core/series.py", line 659, in name
+    return self._name
+  File "/home/joao/anaconda3/envs/env-bnlearn/lib/python3.8/site-packages/pandas/core/generic.py", line 5902, in __getattr__
+    return object.__getattribute__(self, name)
+AttributeError: 'Series' object has no attribute '_name'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "MAGA_original.py", line 230, in <module>
+    best_graph, num_eval_bic, population, reached_goal = MAGA(population, max_bic_eval, Pm_min, Pm_max, Po, Pc_min,
+  File "MAGA_original.py", line 86, in MAGA
+    best_graph, num_eval_bic_sl = self_learning(sL, best_graph, sPm, Po, sGen, data, feasible_only)
+  File "/home/joao/Desktop/UFMG/PhD/code/EA-DAG/src/ga_operators.py", line 502, in self_learning
+    score = new_agent.compute_bic(data)
+  File "/home/joao/Desktop/UFMG/PhD/code/EA-DAG/src/ga_operators.py", line 122, in compute_bic
+    score += scoring_method(node, parents)
+  File "/home/joao/anaconda3/envs/env-bnlearn/lib/python3.8/site-packages/pgmpy/estimators/ScoreCache.py", line 43, in local_score
+    return self.cache(variable, hashable)
+  File "/home/joao/anaconda3/envs/env-bnlearn/lib/python3.8/site-packages/pgmpy/estimators/ScoreCache.py", line 88, in __call__
+    value = self.original_function(*key)
+  File "/home/joao/anaconda3/envs/env-bnlearn/lib/python3.8/site-packages/pgmpy/estimators/ScoreCache.py", line 47, in _wrapped_original
+    return self.base_scorer.local_score(variable, expected)
+  File "/home/joao/anaconda3/envs/env-bnlearn/lib/python3.8/site-packages/pgmpy/estimators/StructureScore.py", line 334, in local_score
+    state_counts = self.state_counts(variable, parents)
+  File "/home/joao/anaconda3/envs/env-bnlearn/lib/python3.8/site-packages/pgmpy/estimators/base.py", line 139, in state_counts
+    self.data.dropna()
+  File "/home/joao/anaconda3/envs/env-bnlearn/lib/python3.8/site-packages/pandas/util/_decorators.py", line 331, in wrapper
+    return func(*args, **kwargs)
+  File "/home/joao/anaconda3/envs/env-bnlearn/lib/python3.8/site-packages/pandas/core/frame.py", line 6569, in dropna
+    mask = notna(agg_obj).all(axis=agg_axis, bool_only=False)
+  File "/home/joao/anaconda3/envs/env-bnlearn/lib/python3.8/site-packages/pandas/core/generic.py", line 11629, in all
+    return NDFrame.all(self, axis, bool_only, skipna, level, **kwargs)
+  File "/home/joao/anaconda3/envs/env-bnlearn/lib/python3.8/site-packages/pandas/core/generic.py", line 11186, in all
+    return self._logical_func(
+  File "/home/joao/anaconda3/envs/env-bnlearn/lib/python3.8/site-packages/pandas/core/generic.py", line 11157, in _logical_func
+    return self._reduce(
+  File "/home/joao/anaconda3/envs/env-bnlearn/lib/python3.8/site-packages/pandas/core/frame.py", line 10849, in _reduce
+    df = df.T
+  File "/home/joao/anaconda3/envs/env-bnlearn/lib/python3.8/site-packages/pandas/core/frame.py", line 3698, in T
+    return self.transpose()
+  File "/home/joao/anaconda3/envs/env-bnlearn/lib/python3.8/site-packages/pandas/core/frame.py", line 3665, in transpose
+    dtypes = list(self.dtypes)
+  File "/home/joao/anaconda3/envs/env-bnlearn/lib/python3.8/site-packages/pandas/core/generic.py", line 6074, in dtypes
+    return self._constructor_sliced(data, index=self._info_axis, dtype=np.object_)
+  File "/home/joao/anaconda3/envs/env-bnlearn/lib/python3.8/site-packages/pandas/core/series.py", line 483, in __init__
+    self.name = name
+  File "/home/joao/anaconda3/envs/env-bnlearn/lib/python3.8/site-packages/pandas/core/generic.py", line 5914, in __setattr__
+    object.__getattribute__(self, name)
+KeyboardInterrupt

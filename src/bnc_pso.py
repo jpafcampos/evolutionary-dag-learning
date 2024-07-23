@@ -26,7 +26,7 @@ import argparse
 import copy
 import os
 
-def BNC_PSO(particles, goalscore, data, evaluations, w_start, w_end, c1_start, c1_end, c2_start, c2_end, max_bic_eval, feasible_only=True):
+def BNC_PSO(particles, goalscore, data, evaluations, w_start, w_end, c1_start, c1_end, c2_start, c2_end, max_bic_eval, file, feasible_only=True):
     
     best_score = particles[0].bic if particles[0].bic != None else particles[0].compute_bic(data)
     media_score = 0
@@ -37,11 +37,12 @@ def BNC_PSO(particles, goalscore, data, evaluations, w_start, w_end, c1_start, c
             best_particle = particles[i]
 
     ev = 0
+    num_bic_eval = 0
+    reached_goal = False
     bests = []
     medias = []
     iter = 0
-    while  (iter < max_iter) and best_score >(goalscore+0.00000001):
-        print("iter: {}".format(iter))
+    while  (num_bic_eval < max_bic_eval) and best_score >(goalscore+0.00000001):
         #print("ev: {}".format(ev))
         #print("aux_bic: {}".format(aux_bic))
         w = w_start - ((w_start-w_end)/evaluations)*ev
@@ -56,7 +57,8 @@ def BNC_PSO(particles, goalscore, data, evaluations, w_start, w_end, c1_start, c
             
             if w_rand < w:
                 aux_particle = mutation(particles[i], feasible_only=feasible_only)
-                aux_particle.compute_bic(data)               
+                aux_particle.compute_bic(data)
+                num_bic_eval += 1            
             else:
                 aux_particle = particle_before_mutation
 
@@ -70,6 +72,7 @@ def BNC_PSO(particles, goalscore, data, evaluations, w_start, w_end, c1_start, c
                     child1, child2 = bnc_pso_crossover(aux_particle, rand_particle, feasible_only)
                     child1.compute_bic(data)
                     child2.compute_bic(data)
+                    num_bic_eval += 2
                     aux_particle = child1 if child1.bic < child2.bic else child2
 
             c2_rand = random.random()
@@ -79,6 +82,7 @@ def BNC_PSO(particles, goalscore, data, evaluations, w_start, w_end, c1_start, c
                     child1, child2 = bnc_pso_crossover(aux_particle, best_particle, feasible_only)
                     child1.compute_bic(data)
                     child2.compute_bic(data)
+                    num_bic_eval += 2
                     aux_particle = child1 if child1.bic < child2.bic else child2
 
             new_particles.append(aux_particle)
@@ -88,6 +92,8 @@ def BNC_PSO(particles, goalscore, data, evaluations, w_start, w_end, c1_start, c
             if new_particles[i].bic < best_score:
                 best_score = copy.deepcopy(new_particles[i].bic)
                 best_particle = copy.deepcopy(new_particles[i])
+        
+        write_metrics_history(file, best_particle, goalscore, ground_truth, data)
 
         for i in range(len(particles)):
            if new_particles[i].bic <= particles[i].bic:
@@ -99,6 +105,11 @@ def BNC_PSO(particles, goalscore, data, evaluations, w_start, w_end, c1_start, c
         medias.append(media_score/len(particles))
         ev += 1
         iter += 1
+
+    # check if goal reached
+    if best_score <= goalscore + 0.00000001:
+        reached_goal = True
+
     return best_particle, particles, num_bic_eval, reached_goal
 
 def write_metrics_history(file, individual, goal_bic, ground_truth, data):
@@ -125,52 +136,41 @@ def compute_metrics():
     # Save results
     print('Saving results')
 
-    filename = PATH +f'GA_all_runs_results_{args.data}.csv'
+    filename = PATH +f'BNCPSO_all_runs_results_{args.data}.csv'
 
     with open(filename, 'a', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow([args.data, args.type_exp, goal_bic, args.mutation_rate, 
-                            args.crossover_rate, args.popSize, args.feasible_only, 
+        writer.writerow([args.data, args.type_exp, goal_bic, args.popSize, args.feasible_only, 
                             args.feasible_only_init_pop, reached_goal, num_bic_eval, end-start, best_score_bic, best_score_ls, SLF, TLF])
 
 
 if __name__ == '__main__':
 
     # Load arguments
-    parser = argparse.ArgumentParser(description='Evolutionary Algorithm for BN structural learning.')
+    parser = argparse.ArgumentParser(description='Particle Swarm for BN structural learning.')
     parser.add_argument('--data', type=str, help='Name of the dataset.')
-    parser.add_argument('--mutation_rate', type=float, help='Probability of mutation.')
-    parser.add_argument('--crossover_rate', type=float, help='Probability of crossover.')
     parser.add_argument('--popSize', type=int, help='Population size.')
-    parser.add_argument('--patience', type=int, help='Max number of iterations without improvement.')
     parser.add_argument('--mu', type=float, help='Lagrangian multiplier.')
     parser.add_argument('--feasible_only', action='store_true')
     parser.add_argument('--no-feasible_only', dest='feasible_only', action='store_false')
     parser.add_argument('--feasible_only_init_pop', action='store_true')
     parser.add_argument('--no-feasible_only_init_pop', dest='feasible_only_init_pop', action='store_false')
-    parser.add_argument('--run_both', action='store_true')
     parser.add_argument('--num_runs', type=int, help='Number of runs', default=1)
     parser.add_argument('--random', type=int, help='Wether the sample is random or not', default=1)
     parser.add_argument('--type_exp', type=int, help='Type of experiment (ratio parameters)', default=1)
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--no-verbose', dest='verbose', action='store_false')
-    parser.add_argument('--crossover_function', type=str, help='Crossover function to be used.', default='bnc_pso')
     args = parser.parse_args()
 
-    PATH = '/home/joao/Desktop/UFMG/PhD/code/EA-DAG/results/MAGA/' + args.data + '/'
+    PATH = '/home/joao/Desktop/UFMG/PhD/code/EA-DAG/results/BNCPSO/' + args.data + '/'
     # if PATH does not exist, change it to the path in the server
     if not os.path.exists(PATH):
-        PATH = '/home/joaocampos/phd_code/evolutionary-dag-learning/results/MAGA/' + args.data + '/'
+        PATH = '/home/joaocampos/phd_code/evolutionary-dag-learning/results/BNCPSO/' + args.data + '/'
     if not os.path.exists(PATH):
-        PATH = '/home/bessani/phd_code/evolutionary-dag-learning/results/MAGA/' + args.data + '/'
-
-    print("Using crossover function:", args.crossover_function)
+        PATH = '/home/bessani/phd_code/evolutionary-dag-learning/results/BNCPSO/' + args.data + '/'
 
     # Parameters
-    mutation_rate = args.mutation_rate
-    crossover_rate = args.crossover_rate
     pop_size = args.popSize
-    patience = args.patience
     feasible_only = args.feasible_only
     mu = args.mu
     n_runs = args.num_runs
@@ -183,8 +183,8 @@ if __name__ == '__main__':
     for i in range(n_runs):
 
         # Create new numbered csv file for each run
-        filename_run = PATH +f'run_{i+1}_results_{args.data}.csv'
-        with open(filename_run, 'w', newline='') as f:
+        file = PATH +f'run_{i+1}_results_{args.data}.csv'
+        with open(file, 'w', newline='') as f:
             writer = csv.writer(f)
             writer.writerow(['BIC - Goal', 'BIC', 'F1 Score', 'Accuracy', 'Precision', 'Recall', 'SHD', 'SLF', 'TLF'])
 
@@ -230,13 +230,14 @@ if __name__ == '__main__':
         max_iter = 200
 
         #def BNC_PSO(particles, goalscore, data, evaluations, w_start, w_end, c1_start, c1_end, c2_start, c2_end, max_iter, feasible_only=True):
-        best_particle, particles, num_bic_eval, reached_goal = BNC_PSO(population, goal_bic, data, evaluations, w_start, w_end, c1_start, c1_end, c2_start, c2_end, max_bic_eval, feasible_only=feasible_only)
+        best_particle, particles, num_bic_eval, reached_goal = BNC_PSO(population, goal_bic, data, evaluations, w_start, w_end, c1_start, c1_end, c2_start, c2_end, max_bic_eval, file, feasible_only=feasible_only)
+        end = time.time()
         print("best graph returned BIC")
-        print(best_graph.bic)
+        print(best_particle.bic)
 
-        best_graph = best_graph.individual_to_digraph()
+        best_graph = best_particle.individual_to_digraph()
         # Compute metrics
-        compute_metrics(run_both=args.run_both, alg='bic')
+        compute_metrics()
 
         print("Algorithm ended. Computing Results")
         end = time.time()

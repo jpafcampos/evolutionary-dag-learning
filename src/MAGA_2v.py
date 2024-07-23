@@ -26,7 +26,7 @@ import copy
 import os
 
 
-def MAGA(population, max_eval_bic, Pm_min, Pm_max, Po, Pc_min, Pc_max, t_max, goal_bic, sL, sPm, sGen, file, self_learn, feasible_only, verbose=False):
+def MAGA_2(population, max_eval_bic, Pm_min, Pm_max, Po, Pc_min, Pc_max, t_max, goal_bic, sL, sPm, sGen, file, self_learn, feasible_only, verbose=False):
 
     best_bic = float('inf')
     best_graph = None
@@ -60,22 +60,19 @@ def MAGA(population, max_eval_bic, Pm_min, Pm_max, Po, Pc_min, Pc_max, t_max, go
                     aux_best_bic = population[agent_idx].bic
             if aux_best_bic < population[best_ind].bic:
                 best_ind = aux_best_idx
-        total_m = round(len(population) * len(population[0].nodes) * Pm)
-        aux_m = 0
-        while aux_m < total_m:
-            aux_rand = random.randint(0, len(population)-1)
-            if aux_rand != best_ind:
-                aux_m += 1
-                agent_before_mutation = copy.deepcopy(population[aux_rand])
-                new_agent = mutation(agent_before_mutation, feasible_only)
-                new_agent.compute_bic(data)
+
+        # Mutation  
+        for agent_idx in range(len(population)):
+            if random.uniform(0,1) < Pm:
+                agent_before_mutation = copy.deepcopy(population[agent_idx])
+                mutated_agent = mutation(population[agent_idx], feasible_only)
+                mutated_agent.compute_bic(data)
                 num_eval_bic += 1
-                if new_agent.bic < agent_before_mutation.bic:
-                    population[aux_rand].update_fenotype(new_agent)
-                    aux_m += 1
+                if mutated_agent.bic < agent_before_mutation.bic:
+                    population[agent_idx] = mutated_agent
                 elif random.uniform(0,1) < Po:
-                    population[aux_rand].update_fenotype(new_agent)
-                    aux_m += 1
+                        population[agent_idx] = mutated_agent
+
         for agent in population:
             if agent.bic < best_bic:
                 best_bic = agent.bic
@@ -102,7 +99,7 @@ def MAGA(population, max_eval_bic, Pm_min, Pm_max, Po, Pc_min, Pc_max, t_max, go
 def write_metrics_history(file, individual, goal_bic, ground_truth, data):
     bic = individual.compute_bic(data) if individual.bic == None else individual.bic
     f1score, accuracy, precision, recall, SHD, SLF, TLF = individual.compute_accuracy_metrics(ground_truth)
-    # acrescentar vetor de genes
+
     with open(file, 'a', newline='') as f:
         writer = csv.writer(f)
         writer.writerow([bic-goal_bic, bic, f1score, accuracy, precision, recall, SHD, SLF, TLF])
@@ -124,7 +121,7 @@ def compute_metrics():
     # Save results
     print('Saving results')
 
-    filename = PATH +f'MAGA_all_runs_results_{args.data}.csv'
+    filename = PATH +f'MAGA_2_all_runs_results_{args.data}.csv'
 
     with open(filename, 'a', newline='') as file:
         writer = csv.writer(file)
@@ -159,12 +156,12 @@ if __name__ == '__main__':
     parser.add_argument('--no-verbose', dest='verbose', action='store_false')
     args = parser.parse_args()
     
-    PATH = '/home/joao/Desktop/UFMG/PhD/code/EA-DAG/results/MAGA/' + args.data + '/'
+    PATH = '/home/joao/Desktop/UFMG/PhD/code/EA-DAG/results/MAGA_2/' + args.data + '/'
     # if PATH does not exist, change it to the path in the server
     if not os.path.exists(PATH):
-        PATH = '/home/joaocampos/phd_code/evolutionary-dag-learning/results/MAGA/' + args.data + '/'
+        PATH = '/home/joaocampos/phd_code/evolutionary-dag-learning/results/MAGA_2/' + args.data + '/'
     if not os.path.exists(PATH):
-        PATH = '/home/bessani/phd_code/evolutionary-dag-learning/results/MAGA/' + args.data + '/'
+        PATH = '/home/bessani/phd_code/evolutionary-dag-learning/results/MAGA_2/' + args.data + '/'
 
     # Parameters
     Pm_min = args.Pm_min
@@ -226,8 +223,8 @@ if __name__ == '__main__':
         start = time.time()
         # Evolve population
         print("Evolving population")
-        #def MAGA(population, max_iter, Pm_min, Pm_max, Po, Pc_min, Pc_max, t_max, goal_bic, sL, sPm, sGen, feasible_only, verbose=False):
-        best_graph, num_eval_bic, population, reached_goal = MAGA(population, max_bic_eval, Pm_min, Pm_max, Po, Pc_min,
+        #def MAGA_2(population, max_iter, Pm_min, Pm_max, Po, Pc_min, Pc_max, t_max, goal_bic, sL, sPm, sGen, feasible_only, verbose=False):
+        best_graph, num_eval_bic, population, reached_goal = MAGA_2(population, max_bic_eval, Pm_min, Pm_max, Po, Pc_min,
                                                    Pc_max, t_max, goal_bic, sL, args.sPm, args.sGen, file, self_learn, feasible_only, verbose=args.verbose)
         print("best graph returned BIC")
         print(best_graph.bic)
