@@ -16,6 +16,7 @@ from pgmpy.metrics import structure_score
 from pgmpy.models import BayesianNetwork
 from pgmpy.estimators import BDeuScore, K2Score, BicScore
 from pgmpy.estimators import ScoreCache
+from pgmpy.base import DAG
 import gc
 from utils import *
 from eval_metrics import *
@@ -113,7 +114,7 @@ class Individual():
             adj = nx.to_numpy_array(G)
             self.genes = adj.flatten().tolist()
     
-    def compute_bic(self, data):
+    def compute_bic_cached(self, data):
         scoring_method = ScoreCache(BicScore(data), data).local_score
         score = 0
         DAG = self.individual_to_digraph()
@@ -124,6 +125,13 @@ class Individual():
         score = -score
         self.bic = score
         
+        return score
+
+    def compute_bic(self, data):
+        model = BayesianNetwork(self.individual_to_digraph().edges())
+        score = (structure_score(model, data, scoring_method="bic"))
+        score = -score
+        self.bic = score
         return score
 
     def compute_accuracy_metrics(self, target):

@@ -20,7 +20,7 @@ def load_samplesize_num_evals(data, type_exp):
             max_bic_eval = 25000
         elif data == 'child':
             sample_size = 10000
-            max_bic_eval = 100000
+            max_bic_eval = 90000
         elif data == 'insurance':
             sample_size = 20000
             max_bic_eval = 140000
