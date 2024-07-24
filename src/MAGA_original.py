@@ -62,6 +62,8 @@ def MAGA(population, max_eval_bic, Pm_min, Pm_max, Po, Pc_min, Pc_max, t_max, go
                 best_ind = aux_best_idx
         total_m = round(len(population) * len(population[0].nodes) * Pm)
         aux_m = 0
+        if verbose:
+            print('Performing mutations')
         while aux_m < total_m:
             aux_rand = random.randint(0, len(population)-1)
             if aux_rand != best_ind:
@@ -83,12 +85,16 @@ def MAGA(population, max_eval_bic, Pm_min, Pm_max, Po, Pc_min, Pc_max, t_max, go
                 best_pos = agent.pos
 
         if self_learn:
+            if verbose:
+                print('Performing self learning')
             best_graph, num_eval_bic_sl = self_learning(sL, best_graph, sPm, Po, sGen, data, feasible_only)
             num_eval_bic += num_eval_bic_sl
 
         population[best_pos] = best_graph
         best_bic = best_graph.bic
 
+        if verbose:
+            print("writing metrics")
         write_metrics_history(file, best_graph, goal_bic, ground_truth, data)
         iteration += 1
 
