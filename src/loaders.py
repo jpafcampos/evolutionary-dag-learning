@@ -147,7 +147,7 @@ def load_gt_network_child(path='../data/child.gml'):
 # ******************************* INSURANCE DATASET ************************************
 # **************************************************************************************
 
-def load_insurance_data(path='../data/insurance_adapted.csv', sample_size=None, randomized=False):
+def load_insurance_data(path='../data/insurance.csv', sample_size=None, randomized=False):
     '''
     Loads and processes the insurance data.
     
