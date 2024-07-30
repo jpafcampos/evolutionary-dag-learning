@@ -13,26 +13,26 @@ def load_samplesize_num_evals(data, type_exp):
             max_bic_eval = 20000
         elif data == 'insurance':
             sample_size = 1000
-            max_bic_eval = 60000
+            max_bic_eval = 90000
     elif type_exp == 2:
         if data == 'asia':
             sample_size = 1000
             max_bic_eval = 25000
         elif data == 'child':
             sample_size = 10000
-            max_bic_eval = 90000
+            max_bic_eval = 110000
         elif data == 'insurance':
             sample_size = 20000
-            max_bic_eval = 140000
+            max_bic_eval = 170000
     elif type_exp == 3:
         if data == 'asia':
             pass #experiment not defined
         elif data == 'child':
             sample_size = 25000
-            max_bic_eval = 120000
+            max_bic_eval = 150000
         elif data == 'insurance':
             sample_size = 50000
-            max_bic_eval = 160000
+            max_bic_eval = 190000
 
     return sample_size, max_bic_eval
 
