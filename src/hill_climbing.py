@@ -394,6 +394,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Hill Climbing Algorithm for BN structural learning.')
     parser.add_argument('--data', type=str, help='Name of the dataset.')
     parser.add_argument('--num_runs', type=int, help='Number of runs', default=1)
+    parser.add_argument('--tabu', type=int, help='Length of tabu search list', default=100)
     parser.add_argument('--random', type=int, help='Wether the sample is random or not', default=1)
     parser.add_argument('--type_exp', type=int, help='Type of experiment (ratio parameters)', default=1)
     parser.add_argument('--verbose', action='store_true')
@@ -409,6 +410,7 @@ if __name__ == '__main__':
 
     randomized = True if args.random == 1 else False
     sample_size, max_bic_eval = load_samplesize_num_evals(args.data, args.type_exp)
+    tabu_length = args.tabu
 
     time_vector = []
     for i in range(args.num_runs):
@@ -441,7 +443,7 @@ if __name__ == '__main__':
         # Run Hill Climbing
         start = time.time()
         hc = CustomHillClimbSearch(data)
-        hc_model = hc.estimate(scoring_method='bicscore', max_iter=max_bic_eval, show_progress=args.verbose, file=file, goal_bic=goal_bic, ground_truth=ground_truth)
+        hc_model = hc.estimate(scoring_method='bicscore', max_iter=max_bic_eval, tabu_length=tabu_length, show_progress=args.verbose, file=file, goal_bic=goal_bic, ground_truth=ground_truth)
         num_eval_bic = hc.num_eval
         reached_goal = hc.reached_goal
         end = time.time()
