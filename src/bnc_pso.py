@@ -45,6 +45,9 @@ def BNC_PSO(particles, goalscore, data, evaluations, w_start, w_end, c1_start, c
     while  (num_bic_eval < max_bic_eval) and best_score >(goalscore+0.00000001):
         #print("ev: {}".format(ev))
         #print("aux_bic: {}".format(aux_bic))
+        #print iteration and num of bic evaluations
+        print("Iteration: ", iter)
+        print("Num BIC evaluations: ", num_bic_eval)
         w = w_start - ((w_start-w_end)/evaluations)*ev
         c1 = c1_start - ((c1_start - c1_end)/evaluations)*ev
         c2 = c2_start - ((c2_start - c2_end)/evaluations)*ev
@@ -220,7 +223,7 @@ if __name__ == '__main__':
         # Evolve population
         print("Evolving population")
 
-        evaluations = 200
+        evaluations = max_bic_eval//3
         w_start = 0.95
         w_end = 0.4
         c1_start = 0.82
