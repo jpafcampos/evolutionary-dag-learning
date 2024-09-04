@@ -46,8 +46,6 @@ def BNC_PSO(particles, goalscore, data, evaluations, w_start, w_end, c1_start, c
         #print("ev: {}".format(ev))
         #print("aux_bic: {}".format(aux_bic))
         #print iteration and num of bic evaluations
-        print("Iteration: ", iter)
-        print("Num BIC evaluations: ", num_bic_eval)
         w = w_start - ((w_start-w_end)/evaluations)*ev
         c1 = c1_start - ((c1_start - c1_end)/evaluations)*ev
         c2 = c2_start - ((c2_start - c2_end)/evaluations)*ev
