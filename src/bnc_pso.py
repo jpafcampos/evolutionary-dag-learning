@@ -165,12 +165,12 @@ if __name__ == '__main__':
     parser.add_argument('--no-verbose', dest='verbose', action='store_false')
     args = parser.parse_args()
 
-    PATH = '/home/joao/Desktop/UFMG/PhD/code/EA-DAG/results/BNCPSO/' + args.data + '/'
+    PATH = '/home/joao/Desktop/UFMG/PhD/code/EA-DAG/results/BNCPSO/' + args.data + '/' + str(args.type_exp) + '/'
     # if PATH does not exist, change it to the path in the server
     if not os.path.exists(PATH):
-        PATH = '/home/joaocampos/phd_code/evolutionary-dag-learning/results/BNCPSO/' + args.data + '/'
+        PATH = '/home/joaocampos/phd_code/evolutionary-dag-learning/results/BNCPSO/' + args.data + '/' + str(args.type_exp) + '/'
     if not os.path.exists(PATH):
-        PATH = '/home/bessani/phd_code/evolutionary-dag-learning/results/BNCPSO/' + args.data + '/'
+        PATH = '/home/bessani/phd_code/evolutionary-dag-learning/results/BNCPSO/' + args.data + '/' + str(args.type_exp) + '/'
 
     # Parameters
     pop_size = args.popSize

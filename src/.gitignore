@@ -60,4 +60,11 @@ __pycache__/
 *.svg
 *.ico
 
+#ignore csv files
+*.csv
+
+#ignore gml files
+*.gml
+
+
 

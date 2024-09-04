@@ -46,10 +46,6 @@ graph [
   ]
   edge [
     source 3
-    target 2
-  ]
-  edge [
-    source 3
     target 4
   ]
   edge [
@@ -59,6 +55,10 @@ graph [
   edge [
     source 4
     target 7
+  ]
+  edge [
+    source 5
+    target 2
   ]
   edge [
     source 6
