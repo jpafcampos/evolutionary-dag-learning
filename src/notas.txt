@@ -25,3 +25,8 @@ MAGA for global numerical optimization = usar para versão contínua
 
 < Acrescentar número de av do BIC como critério de parada
 > Usar numero de amostras proporcional a 1, 25 e 50 (consultar tabela overleaf)
+
+Ideias:
+testar todos sem self learn
+testar self learn só no final do processo de otimização
+testar outras taxas de mutação
