@@ -38,15 +38,15 @@ graph [
   ]
   edge [
     source 1
-    target 0
-  ]
-  edge [
-    source 1
     target 4
   ]
   edge [
     source 3
     target 4
+  ]
+  edge [
+    source 4
+    target 0
   ]
   edge [
     source 4
