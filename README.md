@@ -1,5 +1,31 @@
-# evolutionary-dag-learning
-Evolutionary Algorithm that learns a DAG (Bayesian Network) from data
+# Multi-agent genetic algorithm for bayesian networks structural learning
+Official repository for:
 
-This is part of my PhD research in DAG learning using discrete and continuos approaches
-The continuous objective function and DAG constraint are based on NOTEARS
+> Campos, J. P., Machado, I. G., & Bessani, M. (2025). *Multi-agent genetic algorithm for Bayesian networks structural learning.* **Knowledge-Based Systems, 310, 113025.**
+> [https://doi.org/10.1016/j.knosys.2025.113025](https://doi.org/10.1016/j.knosys.2025.113025)
+
+## Overview
+
+This repository implements a multi-agent genetic algorithm (MAGA) for learning the structure of Bayesian networks from data. [One or two sentences on the core idea: what "multi-agent" contributes over a standard GA — e.g., agents exploring subregions of the DAG search space, local competition/cooperation, and how scoring/acyclicity constraints are handled.]
+
+## Features
+
+- [Multi-agent GA search over DAG space]
+- [Scoring functions supported, e.g. BIC/BDeu]
+- [Acyclicity enforcement / repair operators]
+- [Benchmark networks and evaluation metrics: SHD, F1, etc.]
+## Citation
+
+If you use this work, please cite:
+
+```bibtex
+@article{campos2025multi,
+  title   = {Multi-agent genetic algorithm for Bayesian networks structural learning},
+  author  = {Campos, Joao P. A. F. and Machado, Itallo G. and Bessani, Michel},
+  journal = {Knowledge-Based Systems},
+  volume  = {310},
+  pages   = {113025},
+  year    = {2025},
+  publisher = {Elsevier}
+}
+```
