@@ -6,7 +6,7 @@ Official repository for:
 
 ## Overview
 
-This repository implements a multi-agent genetic algorithm (MAGA) for learning the structure of Bayesian networks from data. [One or two sentences on the core idea: what "multi-agent" contributes over a standard GA — e.g., agents exploring subregions of the DAG search space, local competition/cooperation, and how scoring/acyclicity constraints are handled.]
+This repository implements a multi-agent genetic algorithm (MAGA) for learning the structure of Bayesian networks from data.
 
 ## Features
 
